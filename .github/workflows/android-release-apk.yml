@@ -1,0 +1,58 @@
+name: Android APK Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    name: Build APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Restore Firebase config
+        if: ${{ secrets.GOOGLE_SERVICES_JSON != '' }}
+        shell: bash
+        run: |
+          printf '%s' '${{ secrets.GOOGLE_SERVICES_JSON }}' > app/google-services.json
+
+      - name: Make Gradle executable
+        run: chmod +x ./gradlew
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk Doomly-debug.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Doomly-debug-apk
+          path: Doomly-debug.apk
+
+      - name: Attach APK to release
+        if: ${{ github.event_name == 'release' || startsWith(github.ref, 'refs/tags/') }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Doomly-debug.apk

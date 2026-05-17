@@ -85,39 +85,7 @@ final class FirebaseRepo {
             callback.onError("Firebase is not connected yet.");
             return;
         }
-
-        String webClientId = googleWebClientId(activity);
-        if (webClientId.isEmpty()) {
-            callback.onError("Missing Google web client ID.");
-            return;
-        }
-
-        GetGoogleIdOption googleIdOption = new GetGoogleIdOption.Builder()
-                .setFilterByAuthorizedAccounts(false)
-                .setServerClientId(webClientId)
-                .build();
-        GetCredentialRequest request = new GetCredentialRequest.Builder()
-                .addCredentialOption(googleIdOption)
-                .build();
-
-        CredentialManager credentialManager = CredentialManager.create(activity);
-        credentialManager.getCredentialAsync(
-                activity,
-                request,
-                new CancellationSignal(),
-                Executors.newSingleThreadExecutor(),
-                new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
-                    @Override
-                    public void onResult(GetCredentialResponse result) {
-                        handleCredential(activity, result.getCredential(), callback);
-                    }
-
-                    @Override
-                    public void onError(@NonNull GetCredentialException e) {
-                        activity.runOnUiThread(() -> startLegacySignIn(activity, callback));
-                    }
-                }
-        );
+        startLegacySignIn(activity, callback);
     }
 
     static boolean handleActivityResult(Activity activity, int requestCode, Intent data) {

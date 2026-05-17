@@ -26,6 +26,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.core.content.ContextCompat;
+
 import com.google.firebase.auth.FirebaseUser;
 
 import java.util.List;
@@ -76,11 +78,7 @@ public class MainActivity extends Activity {
         FirebaseRepo.scheduleSync(this);
         if (!receiverRegistered) {
             IntentFilter filter = new IntentFilter(DoomStatsStore.ACTION_STATS_CHANGED);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(statsReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-            } else {
-                registerReceiver(statsReceiver, filter);
-            }
+            ContextCompat.registerReceiver(this, statsReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
             receiverRegistered = true;
         }
     }
