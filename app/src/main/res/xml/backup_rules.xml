@@ -6,8 +6,7 @@
    See https://developer.android.com/about/versions/12/backup-restore
 -->
 <full-backup-content>
-    <!--
-   <include domain="sharedpref" path="."/>
-   <exclude domain="sharedpref" path="device.xml"/>
--->
+    <!-- Keystore keys do not transfer with backups, so encrypted sessions must not either. -->
+    <exclude domain="sharedpref" path="doomly_auth_secure.xml"/>
+    <exclude domain="sharedpref" path="doomly_auth.xml"/>
 </full-backup-content>

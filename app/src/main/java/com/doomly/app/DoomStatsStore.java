@@ -3,12 +3,14 @@ package com.doomly.app;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import org.json.JSONObject;
+
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
-final class DoomStatsStore {
-    static final String ACTION_STATS_CHANGED = "com.doomly.app.STATS_CHANGED";
-    static final int DEFAULT_DAILY_TARGET = 2000;
+public final class DoomStatsStore {
+    public static final String ACTION_STATS_CHANGED = "com.doomly.app.STATS_CHANGED";
+    public static final int DEFAULT_DAILY_TARGET = 2000;
 
     private static final String PREFS = "doomly_stats";
     private static final String KEY_TODAY = "today";
@@ -22,12 +24,14 @@ final class DoomStatsStore {
     private static final String KEY_DISPLAY_NAME = "display_name";
     private static final String KEY_DEBUG_LINE = "debug_line";
     private static final String KEY_DEBUG_UPDATED_AT = "debug_updated_at";
+    private static final String KEY_DAILY_HISTORY = "daily_history";
+    private static final int MAX_HISTORY_DAYS = 30;
     private static final DateTimeFormatter DAY_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private DoomStatsStore() {
     }
 
-    static Snapshot snapshot(Context context) {
+    public static Snapshot snapshot(Context context) {
         SharedPreferences prefs = prefs(context);
         rollDayIfNeeded(prefs);
         int todayReels = prefs.getInt(KEY_TODAY_REELS, 0);
@@ -49,7 +53,7 @@ final class DoomStatsStore {
         );
     }
 
-    static DebugSnapshot debugSnapshot(Context context) {
+    public static DebugSnapshot debugSnapshot(Context context) {
         SharedPreferences prefs = prefs(context);
         return new DebugSnapshot(
                 prefs.getString(KEY_DEBUG_LINE, "No Instagram signals yet."),
@@ -57,7 +61,7 @@ final class DoomStatsStore {
         );
     }
 
-    static Snapshot recordReel(Context context) {
+    public static Snapshot recordReel(Context context) {
         SharedPreferences prefs = prefs(context);
         rollDayIfNeeded(prefs);
         LocalDate today = LocalDate.now();
@@ -81,7 +85,7 @@ final class DoomStatsStore {
         return snapshot(context);
     }
 
-    static Snapshot recordLike(Context context) {
+    public static Snapshot recordLike(Context context) {
         SharedPreferences prefs = prefs(context);
         rollDayIfNeeded(prefs);
         prefs.edit()
@@ -91,13 +95,13 @@ final class DoomStatsStore {
         return snapshot(context);
     }
 
-    static Snapshot setDailyTarget(Context context, int target) {
+    public static Snapshot setDailyTarget(Context context, int target) {
         int safeTarget = Math.max(1, Math.min(target, 20_000));
         prefs(context).edit().putInt(KEY_DAILY_TARGET, safeTarget).apply();
         return snapshot(context);
     }
 
-    static Snapshot setDisplayName(Context context, String displayName) {
+    public static Snapshot setDisplayName(Context context, String displayName) {
         String safeName = displayName == null ? "" : displayName.trim();
         if (safeName.length() > 24) {
             safeName = safeName.substring(0, 24);
@@ -106,15 +110,66 @@ final class DoomStatsStore {
         return snapshot(context);
     }
 
-    static void recordDebug(Context context, String line) {
+    public static void recordDebug(Context context, String line) {
         prefs(context).edit()
                 .putString(KEY_DEBUG_LINE, line)
                 .putLong(KEY_DEBUG_UPDATED_AT, System.currentTimeMillis())
                 .apply();
     }
 
-    static String todayKey() {
+    /** Get daily history: Map of "2026-06-09" → reelCount. */
+    public static java.util.Map<String, Integer> dailyHistory(Context context) {
+        java.util.LinkedHashMap<String, Integer> map = new java.util.LinkedHashMap<>();
+        String json = prefs(context).getString(KEY_DAILY_HISTORY, "{}");
+        try {
+            JSONObject obj = new JSONObject(json);
+            java.util.Iterator<String> keys = obj.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                map.put(key, obj.getInt(key));
+            }
+        } catch (Exception ignored) {}
+        return map;
+    }
+
+    /** Get reel count for a specific past date. */
+    public static int reelsForDate(Context context, String dateKey) {
+        String json = prefs(context).getString(KEY_DAILY_HISTORY, "{}");
+        try {
+            return new JSONObject(json).optInt(dateKey, -1);
+        } catch (Exception e) { return -1; }
+    }
+
+    public static String todayKey() {
         return LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+    }
+
+    /** Merge cloud total reels — take max of local and cloud. */
+    public static void mergeTotalReels(Context context, int cloudTotal) {
+        SharedPreferences p = prefs(context);
+        int local = p.getInt(KEY_TOTAL_REELS, 0);
+        if (cloudTotal > local) {
+            p.edit().putInt(KEY_TOTAL_REELS, cloudTotal).apply();
+        }
+    }
+
+    /** Merge daily history from Supabase JSONArray into local store. */
+    public static void mergeDailyHistory(Context context, org.json.JSONArray arr) {
+        SharedPreferences p = prefs(context);
+        String json = p.getString(KEY_DAILY_HISTORY, "{}");
+        try {
+            JSONObject obj = new JSONObject(json);
+            for (int i = 0; i < arr.length(); i++) {
+                org.json.JSONObject row = arr.getJSONObject(i);
+                String date = row.optString("date", "");
+                int reels = row.optInt("reels", 0);
+                if (!date.isEmpty() && !obj.has(date)) {
+                    obj.put(date, reels);
+                }
+            }
+            while (obj.length() > MAX_HISTORY_DAYS) obj.remove(obj.keys().next());
+            p.edit().putString(KEY_DAILY_HISTORY, obj.toString()).apply();
+        } catch (Exception ignored) {}
     }
 
     private static SharedPreferences prefs(Context context) {
@@ -128,6 +183,11 @@ final class DoomStatsStore {
             return;
         }
 
+        // Save yesterday's count before resetting
+        if (!storedToday.isEmpty()) {
+            commitToHistory(prefs, storedToday, prefs.getInt(KEY_TODAY_REELS, 0));
+        }
+
         prefs.edit()
                 .putString(KEY_TODAY, today)
                 .putInt(KEY_TODAY_REELS, 0)
@@ -135,18 +195,32 @@ final class DoomStatsStore {
                 .apply();
     }
 
-    static final class Snapshot {
-        final int todayReels;
-        final int todayLikes;
-        final int totalReels;
-        final int totalLikes;
-        final int streak;
-        final int xp;
-        final int dailyTarget;
-        final int targetProgressPercent;
-        final String displayName;
+    private static void commitToHistory(SharedPreferences prefs, String dateKey, int reels) {
+        String json = prefs.getString(KEY_DAILY_HISTORY, "{}");
+        try {
+            JSONObject obj = new JSONObject(json);
+            if (!obj.has(dateKey)) {
+                obj.put(dateKey, reels);
+                while (obj.length() > MAX_HISTORY_DAYS) {
+                    obj.remove(obj.keys().next());
+                }
+                prefs.edit().putString(KEY_DAILY_HISTORY, obj.toString()).apply();
+            }
+        } catch (Exception ignored) {}
+    }
 
-        Snapshot(
+    public static final class Snapshot {
+        public final int todayReels;
+        public final int todayLikes;
+        public final int totalReels;
+        public final int totalLikes;
+        public final int streak;
+        public final int xp;
+        public final int dailyTarget;
+        public final int targetProgressPercent;
+        public final String displayName;
+
+        public Snapshot(
                 int todayReels,
                 int todayLikes,
                 int totalReels,
@@ -168,11 +242,11 @@ final class DoomStatsStore {
         }
     }
 
-    static final class DebugSnapshot {
-        final String line;
-        final long updatedAtMs;
+    public static final class DebugSnapshot {
+        public final String line;
+        public final long updatedAtMs;
 
-        DebugSnapshot(String line, long updatedAtMs) {
+        public DebugSnapshot(String line, long updatedAtMs) {
             this.line = line;
             this.updatedAtMs = updatedAtMs;
         }

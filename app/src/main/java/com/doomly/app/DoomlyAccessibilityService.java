@@ -2,103 +2,185 @@ package com.doomly.app;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
-import android.os.Handler;
-import android.os.Looper;
 import android.os.SystemClock;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
+import com.doomly.app.doomstats.RecentActivityLog;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Locale;
 
+/**
+ * Scroll-driven reel detector with content-fingerprint deduplication.
+ *
+ * Detection: UI-pattern recognition (like+comment+share buttons, audio label,
+ * reel content descriptions) — no dependency on class names or CollectionInfo.
+ *
+ * Counting: TYPE_VIEW_SCROLLED triggers a candidate count. A lightweight
+ * content fingerprint (first ~300 chars of content descriptions) prevents
+ * double-counting the same reel during content refreshes. Fingerprints expire
+ * after 12s so re-watching a reel counts again.
+ *
+ * Debug logs: /sdcard/Android/data/com.doomly.app/files/logs/debug.log
+ */
+@SuppressWarnings("deprecation")
 public class DoomlyAccessibilityService extends AccessibilityService {
-    private static final String INSTAGRAM_PACKAGE = "com.instagram.android";
-    private static final long MIN_MS_BETWEEN_REELS = 1700L;
-    private static final long REEL_DWELL_MS = 1800L;
-    private static final long SAME_FINGERPRINT_IGNORE_MS = 12_000L;
-    private static final long DEBUG_THROTTLE_MS = 700L;
-    private static final int MAX_NODE_PARTS = 90;
 
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private static final String INSTAGRAM_PKG = "com.instagram.android";
 
-    private String lastCountedFingerprint = "";
-    private String lastCandidateFingerprint = "";
-    private String lastLikedFingerprint = "";
-    private String lastScrollToken = "";
-    private long lastCandidateAtMs = 0L;
+    // ── Timing ─────────────────────────────────────────────────────────
+    private static final long MIN_MS_BETWEEN_REELS = 800L;    // minimum gap between counts
+    private static final long SAME_FP_IGNORE_MS = 12_000L;    // ignore same fingerprint for 12s
+    private static final long REELS_EXIT_GRACE_MS = 3_000L;
+    private static final long DEBUG_THROTTLE_MS = 500L;
+
+    // ── Dedup state ────────────────────────────────────────────────────
+    private String lastCountedFp = "";       // fingerprint of last counted reel
+    private long lastCountedFpAtMs = 0L;     // when that fingerprint was counted
     private long lastCountAtMs = 0L;
-    private long lastSameFingerprintCountAtMs = 0L;
+    private long lastScrollEventAtMs = 0L;
+    private long reelsSeenAtMs = 0L;
     private long lastDebugAtMs = 0L;
-    private long reelsEnteredAtMs = 0L;
-    private boolean wasInReels = false;
-    private boolean candidateStartedLiked = false;
-    private Runnable pendingDwellRunnable;
+    private boolean inReels = false;
+    private String lastScreenSummary = "";
+
+    // ── File logging ───────────────────────────────────────────────────
+    private static final boolean FILE_LOG_ENABLED = true;
+    private static File logFile = null;
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        if (FILE_LOG_ENABLED) {
+            try {
+                File dir = new File(getExternalFilesDir(null), "logs");
+                if (!dir.exists()) dir.mkdirs();
+                logFile = new File(dir, "debug.log");
+            } catch (Exception ignored) {}
+        }
+        fileLog("=== Service created ===");
+    }
+
+    // ── AccessibilityService lifecycle ─────────────────────────────────
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event == null || event.getPackageName() == null) {
-            return;
-        }
-        if (!INSTAGRAM_PACKAGE.contentEquals(event.getPackageName())) {
+        if (event == null || event.getPackageName() == null) return;
+        if (!INSTAGRAM_PKG.contentEquals(event.getPackageName())) return;
+
+        int type = event.getEventType();
+
+        // Accept all event types that might carry scroll or content info
+        if (type != AccessibilityEvent.TYPE_VIEW_SCROLLED
+                && type != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+                && type != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                && type != AccessibilityEvent.TYPE_VIEW_SELECTED) {
             return;
         }
 
         AccessibilityNodeInfo root = getRootInActiveWindow();
-        if (root == null) {
-            return;
-        }
+        if (root == null) return;
 
         try {
-            Scene scene = Scene.from(root);
-            if (!scene.looksLikeReelsScreen()) {
-                debug("skip: not reels | " + scene.signalSummary(), true);
-                resetReelsState();
-                return;
-            }
-
-            if (scene.hasAdSignal()) {
-                debug("skip: ad/sponsored reel | " + scene.signalSummary(), true);
-                cancelPendingCandidate();
-                lastCandidateFingerprint = "";
-                return;
-            }
-
             long now = SystemClock.elapsedRealtime();
-            if (!wasInReels) {
-                wasInReels = true;
-                reelsEnteredAtMs = now;
-                lastCandidateFingerprint = "";
-                debug("entered reels | " + scene.signalSummary(), true);
+
+            // ── 1. Detect Reels screen via UI pattern ─────────────────
+            ScreenInfo info = ScreenInfo.from(root);
+
+            // Build summary for logging
+            String summary = "cls=" + info.rootClass
+                    + " scroll=" + info.hasScrollable
+                    + " like=" + info.hasLikeButton
+                    + " cmt=" + info.hasCommentButton
+                    + " share=" + info.hasShareButton
+                    + " audio=" + info.hasAudioLabel
+                    + " reelDesc=" + info.hasReelDescription
+                    + " reelId=" + info.hasReelResourceId
+                    + " overlay=" + info.isOverlayOpen
+                    + " ad=" + info.isAd;
+
+            // Log if significant change
+            if (!summary.equals(lastScreenSummary)) {
+                lastScreenSummary = summary;
+                fileLog("screen: " + summary);
             }
 
-            String fingerprint = scene.reelFingerprint();
-            if (fingerprint.length() < 12) {
-                debug("skip: weak fingerprint | " + scene.signalSummary(), true);
+            boolean looksLikeReels = info.looksLikeReels();
+
+            if (!looksLikeReels) {
+                if (inReels && (now - reelsSeenAtMs) > REELS_EXIT_GRACE_MS) {
+                    leaveReels(now);
+                }
+                if (!inReels) {
+                    if ((now - lastDebugAtMs) > 5000L) {
+                        fileLog("not-reels: " + summary);
+                        lastDebugAtMs = now;
+                    }
+                }
+                return;
+            }
+            reelsSeenAtMs = now;
+
+            if (info.isAd) {
+                fileLog("skip: ad detected");
                 return;
             }
 
-            if (lastCandidateFingerprint.isEmpty()) {
-                startCandidate(fingerprint, now, "entry", scene);
+            // Overlay open (comments sheet, share sheet) — stay in reels
+            // but don't count (scrolling a text field isn't a reel swipe)
+            if (info.isOverlayOpen) {
                 return;
             }
 
-            if (isNewVerticalScroll(event, now)) {
-                startCandidate(fingerprint, now, "scroll", scene);
-                return;
+            if (!inReels) {
+                inReels = true;
+                lastCountedFp = "";
+                fileLog(">>> ENTERED REELS <<< " + summary);
+                debug("entered reels", true);
             }
 
-            if (!fingerprint.equals(lastCandidateFingerprint)) {
-                debug("skip: content refresh only | fp=" + shortFingerprint(fingerprint), false);
-                return;
+            // ── 2. Count on scroll with fingerprint dedup ─────────────
+            if (type == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
+                lastScrollEventAtMs = now;
+
+                if ((now - lastCountAtMs) < MIN_MS_BETWEEN_REELS) return;
+
+                // Build a lightweight fingerprint of current reel content
+                String fp = info.contentFingerprint;
+                if (fp.isEmpty()) return;
+
+                // Same fingerprint as last counted? Skip (content refresh,
+                // not a new reel) — unless enough time has passed
+                if (fp.equals(lastCountedFp)
+                        && (now - lastCountedFpAtMs) < SAME_FP_IGNORE_MS) {
+                    fileLog("dedup: same fp=" + fp.substring(0, Math.min(8, fp.length())));
+                    return;
+                }
+
+                countReel(now, "scroll", fp);
             }
 
-            maybeRecordLike(scene, fingerprint);
-
-            long dwellMs = now - lastCandidateAtMs;
-            if (dwellMs >= REEL_DWELL_MS && canCount(now, fingerprint)) {
-                recordReel(fingerprint, now, "counted: dwell " + dwellMs + "ms");
-            } else {
-                debug("waiting: dwell " + dwellMs + "/" + REEL_DWELL_MS + "ms | fp=" + shortFingerprint(fingerprint), false);
+            // ── 3. Fallback: count on TYPE_VIEW_SELECTED ──────────────
+            if (type == AccessibilityEvent.TYPE_VIEW_SELECTED) {
+                if ((now - lastCountAtMs) >= MIN_MS_BETWEEN_REELS
+                        && (now - lastScrollEventAtMs) < 5000L) {
+                    String fp = info.contentFingerprint;
+                    if (!fp.isEmpty()
+                            && !fp.equals(lastCountedFp)) {
+                        countReel(now, "selected", fp);
+                    }
+                }
             }
+
+        } catch (Exception e) {
+            fileLog("ERROR: " + stackTraceToString(e));
         } finally {
             root.recycle();
         }
@@ -106,296 +188,325 @@ public class DoomlyAccessibilityService extends AccessibilityService {
 
     @Override
     public void onInterrupt() {
-        resetReelsState();
+        fileLog("onInterrupt");
+        leaveReels(SystemClock.elapsedRealtime());
     }
 
-    private boolean isNewVerticalScroll(AccessibilityEvent event, long now) {
-        if (event.getEventType() != AccessibilityEvent.TYPE_VIEW_SCROLLED) {
-            return false;
-        }
-        if (now - reelsEnteredAtMs < 500L) {
-            return false;
-        }
-
-        String token = event.getScrollY() + ":"
-                + event.getFromIndex() + ":"
-                + event.getToIndex() + ":"
-                + event.getItemCount();
-        if (token.equals(lastScrollToken)) {
-            return false;
-        }
-        lastScrollToken = token;
-
-        return event.getScrollY() != -1
-                || event.getFromIndex() != -1
-                || event.getToIndex() != -1
-                || event.getItemCount() > 0;
+    @Override
+    public void onDestroy() {
+        fileLog("=== Service destroyed ===");
+        leaveReels(SystemClock.elapsedRealtime());
+        super.onDestroy();
     }
 
-    private boolean canCount(long now, String fingerprint) {
-        boolean enoughTimePassed = now - lastCountAtMs >= MIN_MS_BETWEEN_REELS;
-        if (!enoughTimePassed) {
-            return false;
-        }
+    // ── Counting ───────────────────────────────────────────────────────
 
-        boolean isNewFingerprint = !fingerprint.equals(lastCountedFingerprint);
-        boolean sameFingerprintExpired = now - lastSameFingerprintCountAtMs >= SAME_FINGERPRINT_IGNORE_MS;
-        return isNewFingerprint || sameFingerprintExpired;
-    }
-
-    private void startCandidate(String fingerprint, long now, String reason, Scene scene) {
-        lastCandidateFingerprint = fingerprint;
-        lastCandidateAtMs = now;
-        candidateStartedLiked = scene.likeControlLiked();
-        scheduleDwellCheck(fingerprint);
-        debug("candidate: " + reason + " | waiting " + REEL_DWELL_MS + "ms | fp="
-                + shortFingerprint(fingerprint) + " | " + scene.signalSummary(), true);
-    }
-
-    private void scheduleDwellCheck(String fingerprint) {
-        if (pendingDwellRunnable != null) {
-            mainHandler.removeCallbacks(pendingDwellRunnable);
-        }
-
-        pendingDwellRunnable = () -> {
-            long now = SystemClock.elapsedRealtime();
-            if (!wasInReels || !fingerprint.equals(lastCandidateFingerprint)) {
-                return;
-            }
-            if (canCount(now, fingerprint)) {
-                recordReel(fingerprint, now, "counted: delayed dwell");
-            } else {
-                debug("skip: cooldown/duplicate | fp=" + shortFingerprint(fingerprint), true);
-            }
-        };
-        mainHandler.postDelayed(pendingDwellRunnable, REEL_DWELL_MS);
-    }
-
-    private void recordReel(String fingerprint, long now, String reason) {
-        DoomStatsStore.recordReel(this);
-        lastCountedFingerprint = fingerprint;
+    private void countReel(long now, String reason, String fp) {
+        DoomStatsStore.Snapshot snapshot = DoomStatsStore.recordReel(this);
+        RecentActivityLog.record(this, 1);
+        MotivationNotifier.celebrateIfNeeded(this, snapshot);
+        lastCountedFp = fp;
+        lastCountedFpAtMs = now;
         lastCountAtMs = now;
-        lastSameFingerprintCountAtMs = now;
-        lastCandidateFingerprint = fingerprint;
-        debug(reason + " | fp=" + shortFingerprint(fingerprint), true);
-        FirebaseRepo.scheduleSync(this);
+        String shortFp = fp.substring(0, Math.min(8, fp.length()));
+        String msg = "COUNTED [" + reason + "] fp=" + shortFp
+                + " total=" + snapshot.totalReels
+                + " today=" + snapshot.todayReels;
+        debug(msg, true);
+        fileLog(msg);
+        CloudSyncScheduler.scheduleSync(this);
         sendStatsBroadcast();
     }
 
-    private void maybeRecordLike(Scene scene, String fingerprint) {
-        if (candidateStartedLiked || !scene.likeControlLiked() || fingerprint.equals(lastLikedFingerprint)) {
-            return;
+    // ── State management ───────────────────────────────────────────────
+
+    private void leaveReels(long now) {
+        if (inReels) {
+            fileLog("<<< LEFT REELS >>>");
+            debug("left reels", false);
         }
-
-        DoomStatsStore.recordLike(this);
-        lastLikedFingerprint = fingerprint;
-        candidateStartedLiked = true;
-        debug("liked: +1 xp | fp=" + shortFingerprint(fingerprint), true);
-        FirebaseRepo.scheduleSync(this);
-        sendStatsBroadcast();
+        inReels = false;
+        lastCountedFp = "";
     }
+
+    // ── Debug / broadcast ──────────────────────────────────────────────
 
     private void debug(String line, boolean force) {
         long now = SystemClock.elapsedRealtime();
-        if (!force && now - lastDebugAtMs < DEBUG_THROTTLE_MS) {
-            return;
-        }
+        if (!force && (now - lastDebugAtMs) < DEBUG_THROTTLE_MS) return;
         lastDebugAtMs = now;
         DoomStatsStore.recordDebug(this, line);
         sendStatsBroadcast();
     }
 
     private void sendStatsBroadcast() {
-        sendBroadcast(new Intent(DoomStatsStore.ACTION_STATS_CHANGED).setPackage(getPackageName()));
+        sendBroadcast(new Intent(DoomStatsStore.ACTION_STATS_CHANGED)
+                .setPackage(getPackageName()));
     }
 
-    private void resetReelsState() {
-        wasInReels = false;
-        reelsEnteredAtMs = 0L;
-        lastCandidateFingerprint = "";
-        lastScrollToken = "";
-        candidateStartedLiked = false;
-        cancelPendingCandidate();
+    // ── File logging ───────────────────────────────────────────────────
+
+    private void fileLog(String msg) {
+        if (!FILE_LOG_ENABLED || logFile == null) return;
+        try {
+            String timestamp = new SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
+                    .format(new Date());
+            FileWriter fw = new FileWriter(logFile, true);
+            fw.write(timestamp + " " + msg + "\n");
+            fw.close();
+        } catch (IOException ignored) {}
     }
 
-    private void cancelPendingCandidate() {
-        if (pendingDwellRunnable != null) {
-            mainHandler.removeCallbacks(pendingDwellRunnable);
-            pendingDwellRunnable = null;
-        }
+    private static String stackTraceToString(Throwable t) {
+        StringWriter sw = new StringWriter();
+        t.printStackTrace(new PrintWriter(sw));
+        return sw.toString();
     }
 
-    private static String shortFingerprint(String fingerprint) {
-        int split = fingerprint.indexOf(':');
-        return split > 0 ? fingerprint.substring(0, split) : fingerprint;
-    }
+    // ── ScreenInfo: UI-pattern-based screen classification ─────────────
 
-    private static final class Scene {
-        private final String text;
-        private final String ids;
-        private final String classes;
-        private final boolean hasScrollableNode;
-        private final boolean likeControlLiked;
+    /**
+     * Classifies the current screen by looking for the distinctive
+     * Reels UI pattern: a vertical scrollable container that has
+     * like, comment, and share buttons as siblings/descendants.
+     *
+     * This works regardless of class name obfuscation because it
+     * relies on content descriptions and accessibility actions,
+     * which must remain readable for accessibility compliance.
+     */
+    private static final class ScreenInfo {
+        final String rootClass;
+        final boolean hasScrollable;
+        final boolean hasLikeButton;
+        final boolean hasCommentButton;
+        final boolean hasShareButton;
+        final boolean hasAudioLabel;
+        final boolean hasReelDescription;
+        final boolean hasReelResourceId;
+        final boolean isOverlayOpen;
+        final boolean isAd;
+        final String contentFingerprint;   // lightweight hash of reel content
 
-        private Scene(String text, String ids, String classes, boolean hasScrollableNode, boolean likeControlLiked) {
-            this.text = text;
-            this.ids = ids;
-            this.classes = classes;
-            this.hasScrollableNode = hasScrollableNode;
-            this.likeControlLiked = likeControlLiked;
+        ScreenInfo(String rootClass, boolean hasScrollable,
+                   boolean hasLikeButton, boolean hasCommentButton,
+                   boolean hasShareButton,
+                   boolean hasAudioLabel, boolean hasReelDescription,
+                   boolean hasReelResourceId,
+                   boolean isOverlayOpen, boolean isAd,
+                   String contentFingerprint) {
+            this.rootClass = rootClass;
+            this.hasScrollable = hasScrollable;
+            this.hasLikeButton = hasLikeButton;
+            this.hasCommentButton = hasCommentButton;
+            this.hasShareButton = hasShareButton;
+            this.hasAudioLabel = hasAudioLabel;
+            this.hasReelDescription = hasReelDescription;
+            this.hasReelResourceId = hasReelResourceId;
+            this.isOverlayOpen = isOverlayOpen;
+            this.isAd = isAd;
+            this.contentFingerprint = contentFingerprint;
         }
 
-        static Scene from(AccessibilityNodeInfo root) {
-            StringBuilder text = new StringBuilder();
-            StringBuilder ids = new StringBuilder();
-            StringBuilder classes = new StringBuilder();
-            boolean[] scrollable = new boolean[]{false};
-            boolean[] liked = new boolean[]{false};
-            collect(root, text, ids, classes, scrollable, liked, 0, new int[]{0});
-            return new Scene(
-                    text.toString().toLowerCase(Locale.US),
-                    ids.toString().toLowerCase(Locale.US),
-                    classes.toString().toLowerCase(Locale.US),
-                    scrollable[0],
-                    liked[0]
-            );
-        }
+        /** True if the current screen matches the Reels viewer pattern. */
+        boolean looksLikeReels() {
+            // Must have at least 1 of the 3 Reels controls (lower bar when
+            // already in reels — Instagram sometimes hides buttons during
+            // transitions; stickiness prevents premature exit)
+            int controls = (hasLikeButton ? 1 : 0)
+                    + (hasCommentButton ? 1 : 0)
+                    + (hasShareButton ? 1 : 0);
 
-        boolean looksLikeReelsScreen() {
-            String all = text + " " + ids + " " + classes;
-            if (isOverlayOpen(all)) {
-                return false;
+            // Strong signals: audio label, reel content description, or
+            // resource IDs containing reel/clips identifiers
+            boolean hasReelContent = hasAudioLabel || hasReelDescription || hasReelResourceId;
+
+            // Require controls OR reel-specific content (not both)
+            if (controls == 0 && !hasReelContent) return false;
+
+            // Must have a scrollable container or ViewPager root
+            if (!hasScrollable && !rootClass.contains("ViewPager")
+                    && !rootClass.contains("RecyclerView")
+                    && !rootClass.contains("ViewPager2")) {
+                // If we have strong reel content signal, allow without scrollable
+                if (!hasReelContent) return false;
             }
 
-            boolean explicitReels = all.contains("reels")
-                    || all.contains("clips")
-                    || all.contains("clips_viewer")
-                    || all.contains("clip_viewer")
-                    || all.contains("reel_viewer");
-
-            boolean hasReelControls = containsAny(all, "like", "comment")
-                    && containsAny(all, "share", "send")
-                    && containsAny(all, "audio", "original audio", "follow");
-
-            return explicitReels || (hasScrollableNode && hasReelControls);
+            return true;
         }
 
-        boolean hasAdSignal() {
-            String all = text + " " + ids;
-            return all.contains("sponsored")
-                    || all.contains("ad choices")
-                    || all.contains("about this ad")
-                    || all.contains("why you're seeing this ad")
-                    || all.contains("why you are seeing this ad");
+        static ScreenInfo from(AccessibilityNodeInfo root) {
+            String rootClass = root.getClassName() != null
+                    ? root.getClassName().toString() : "";
+
+            boolean[] hasScrollable = {false};
+            boolean[] hasLike = {false};
+            boolean[] hasComment = {false};
+            boolean[] hasShare = {false};
+            boolean[] hasAudio = {false};
+            boolean[] hasReelDesc = {false};
+            boolean[] hasReelId = {false};
+            boolean[] isOverlay = {false};
+            boolean[] isAd = {false};
+            int[] depth = {0};
+
+            // Collect content for fingerprinting (first ~300 chars of
+            // content descriptions, excluding UI chrome words)
+            StringBuilder fpBuilder = new StringBuilder();
+
+            scan(root, hasScrollable, hasLike, hasComment, hasShare,
+                    hasAudio, hasReelDesc, hasReelId,
+                    isOverlay, isAd, depth, 16, fpBuilder);
+
+            String fp = buildFingerprint(fpBuilder.toString());
+
+            return new ScreenInfo(rootClass, hasScrollable[0],
+                    hasLike[0], hasComment[0], hasShare[0],
+                    hasAudio[0], hasReelDesc[0], hasReelId[0],
+                    isOverlay[0], isAd[0], fp);
         }
 
-        boolean likeControlLiked() {
-            return likeControlLiked;
-        }
+        private static void scan(AccessibilityNodeInfo node,
+                                  boolean[] scrollable,
+                                  boolean[] like, boolean[] comment,
+                                  boolean[] share,
+                                  boolean[] audio, boolean[] reelDesc,
+                                  boolean[] reelId,
+                                  boolean[] overlay, boolean[] ad,
+                                  int[] depth, int maxDepth,
+                                  StringBuilder fpBuilder) {
+            if (node == null || depth[0] > maxDepth) return;
 
-        String signalSummary() {
-            String all = text + " " + ids + " " + classes;
-            return "reels=" + containsAny(all, "reels", "clips", "clip_viewer")
-                    + ", controls=" + (containsAny(all, "like", "comment")
-                    && containsAny(all, "share", "send"))
-                    + ", scrollable=" + hasScrollableNode
-                    + ", ad=" + hasAdSignal()
-                    + ", liked=" + likeControlLiked;
-        }
+            if (node.isScrollable()) scrollable[0] = true;
 
-        String reelFingerprint() {
-            String compact = (text + " " + ids)
-                    .replaceAll("\\b(like|liked|comment|comments|share|send|more|reels|clips|home|search|profile|follow|following)\\b", " ")
-                    .replaceAll("\\b(view translation|original audio|audio)\\b", " ")
-                    .replaceAll("\\d+[,.]?\\d*[kKmM]?", " ")
-                    .replaceAll("[^a-z0-9_@# ]", " ")
-                    .replaceAll("\\s+", " ")
-                    .trim();
-            if (compact.length() > 260) {
-                compact = compact.substring(0, 260);
-            }
-            return Integer.toHexString(compact.hashCode()) + ":" + compact;
-        }
+            String cd = node.getContentDescription() != null
+                    ? node.getContentDescription().toString().toLowerCase(Locale.US)
+                    : "";
+            String text = node.getText() != null
+                    ? node.getText().toString().toLowerCase(Locale.US)
+                    : "";
+            String resId = node.getViewIdResourceName() != null
+                    ? node.getViewIdResourceName().toLowerCase(Locale.US)
+                    : "";
+            String combined = cd + " " + text;
 
-        private static boolean isOverlayOpen(String all) {
-            return all.contains("add a comment")
-                    || all.contains("write a message")
-                    || all.contains("send to")
-                    || all.contains("search users")
-                    || all.contains("report")
-                    || all.contains("not interested");
-        }
-
-        private static boolean containsAny(String value, String first, String second) {
-            return value.contains(first) || value.contains(second);
-        }
-
-        private static boolean containsAny(String value, String first, String second, String third) {
-            return value.contains(first) || value.contains(second) || value.contains(third);
-        }
-
-        private static void collect(
-                AccessibilityNodeInfo node,
-                StringBuilder text,
-                StringBuilder ids,
-                StringBuilder classes,
-                boolean[] scrollable,
-                boolean[] liked,
-                int depth,
-                int[] parts
-        ) {
-            if (node == null || depth > 10 || parts[0] >= MAX_NODE_PARTS) {
-                return;
-            }
-
-            if (node.isScrollable()) {
-                scrollable[0] = true;
-            }
-            if (looksLikeLikedButton(node)) {
-                liked[0] = true;
-            }
-
-            append(node.getText(), text, parts);
-            append(node.getContentDescription(), text, parts);
-            append(node.getViewIdResourceName(), ids, parts);
-            append(node.getClassName(), classes, parts);
-
-            for (int i = 0; i < node.getChildCount() && parts[0] < MAX_NODE_PARTS; i++) {
-                AccessibilityNodeInfo child = node.getChild(i);
-                if (child == null) {
-                    continue;
+            // ── Fingerprint collection (first ~300 chars) ────────────
+            if (fpBuilder.length() < 300 && !cd.isEmpty()) {
+                // Strip UI chrome words to keep fingerprint stable
+                String cleaned = cd
+                        .replaceAll("\\b(like|liked|comment|comments|share|send|more|reels|clips|home|search|profile|follow|following)\\b", "")
+                        .replaceAll("\\b(view translation|original audio|audio|double tap to like|double tap to unlike)\\b", "")
+                        .replaceAll("[^a-z0-9 ]", " ")
+                        .replaceAll("\\s+", " ")
+                        .trim();
+                if (!cleaned.isEmpty()) {
+                    if (fpBuilder.length() > 0) fpBuilder.append('|');
+                    fpBuilder.append(cleaned);
+                    // Truncate if exceeds limit
+                    if (fpBuilder.length() > 300) {
+                        fpBuilder.setLength(300);
+                    }
                 }
+            }
+
+            // ── Like button ─────────────────────────────────────────
+            if (!like[0]) {
+                if (combined.contains("like")
+                        || combined.contains("double tap to like")
+                        || combined.contains("double tap to unlike")) {
+                    like[0] = true;
+                }
+            }
+
+            // ── Comment button ──────────────────────────────────────
+            if (!comment[0]) {
+                if (combined.contains("comment")
+                        || combined.contains("add a comment")
+                        || combined.contains("view comments")) {
+                    comment[0] = true;
+                }
+            }
+
+            // ── Share / Send button ─────────────────────────────────
+            if (!share[0]) {
+                if (combined.contains("share")
+                        || combined.contains("send to")
+                        || combined.contains("send")) {
+                    share[0] = true;
+                }
+            }
+
+            // ── Audio label (strong Reels signal) ───────────────────
+            if (!audio[0]) {
+                if (combined.contains("original audio")
+                        || combined.contains("audio")
+                        || cd.contains("audio")) {
+                    audio[0] = true;
+                }
+            }
+
+            // ── Reel content description ────────────────────────────
+            if (!reelDesc[0]) {
+                if (cd.contains("reel")
+                        || cd.contains("video by")
+                        || cd.contains("reels video")
+                        || text.contains("reel")) {
+                    reelDesc[0] = true;
+                }
+            }
+
+            // ── Reel resource IDs ───────────────────────────────────
+            if (!reelId[0]) {
+                if (resId.contains("reel")
+                        || resId.contains("clips")
+                        || resId.contains("clip_viewer")) {
+                    reelId[0] = true;
+                }
+            }
+
+            // ── Overlay detection ───────────────────────────────────
+            if (!overlay[0]) {
+                if (combined.contains("add a comment")
+                        || combined.contains("write a message")
+                        || combined.contains("search users")
+                        || combined.contains("not interested")
+                        || combined.contains("report")) {
+                    overlay[0] = true;
+                }
+            }
+
+            // ── Ad detection ────────────────────────────────────────
+            if (!ad[0]) {
+                if (cd.contains("sponsored")
+                        || cd.contains("ad choices")
+                        || cd.contains("about this ad")
+                        || cd.contains("paid partnership")
+                        || cd.contains("paid promotion")) {
+                    ad[0] = true;
+                }
+            }
+
+            // Recurse children
+            for (int i = 0; i < node.getChildCount(); i++) {
+                AccessibilityNodeInfo child = node.getChild(i);
+                if (child == null) continue;
+                depth[0]++;
                 try {
-                    collect(child, text, ids, classes, scrollable, liked, depth + 1, parts);
+                    scan(child, scrollable, like, comment, share,
+                            audio, reelDesc, reelId,
+                            overlay, ad, depth, maxDepth, fpBuilder);
                 } finally {
+                    depth[0]--;
                     child.recycle();
                 }
             }
         }
 
-        private static boolean looksLikeLikedButton(AccessibilityNodeInfo node) {
-            String content = node.getContentDescription() == null ? "" : node.getContentDescription().toString().trim().toLowerCase(Locale.US);
-            String id = node.getViewIdResourceName() == null ? "" : node.getViewIdResourceName().toLowerCase(Locale.US);
-
-            if (content.equals("liked") || content.equals("unlike") || content.startsWith("unlike ")) {
-                return true;
-            }
-            return id.contains("like") && node.isSelected();
-        }
-
-        private static void append(CharSequence value, StringBuilder out, int[] parts) {
-            if (value == null) {
-                return;
-            }
-            String item = value.toString().trim();
-            if (item.isEmpty()) {
-                return;
-            }
-            if (out.length() > 0) {
-                out.append(' ');
-            }
-            out.append(item);
-            parts[0]++;
+        /** Build a compact fingerprint from collected content descriptions. */
+        private static String buildFingerprint(String raw) {
+            if (raw.isEmpty()) return "";
+            // Use Java's hashCode for speed — collisions are acceptable
+            // since fingerprints expire after SAME_FP_IGNORE_MS
+            return Integer.toHexString(raw.hashCode());
         }
     }
 }

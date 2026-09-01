@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Sparkle eye state -->
+    <path
+        android:fillColor="#FF6CFF8D"
+        android:pathData="M10,12L12,6L14,12L20,14L14,16L12,22L10,16L4,14L10,12Z" />
+</vector>

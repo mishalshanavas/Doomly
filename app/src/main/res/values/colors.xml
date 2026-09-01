@@ -1,8 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="paper">#FFFFFFFF</color>
-    <color name="ink">#FF000000</color>
-    <color name="quiet_gray">#FFF5F5F5</color>
+    <!-- Doomly palette — OLED black for dark mode -->
+    <color name="doom_bg">#FF000000</color>
+    <color name="doom_surface">#FF0D0D0D</color>
+    <color name="doom_surface_alt">#FF1E2330</color>
+    <color name="doom_border">#FF252B35</color>
+    <color name="doom_primary">#FF6CFF8D</color>
+    <color name="doom_text">#FFF4F6F8</color>
+    <color name="doom_text_secondary">#FFB8BEC8</color>
+    <color name="doom_muted">#FF95A1B2</color>
+    <color name="doom_accent">#FF6CFF8D</color>
+
+    <!-- Legacy aliases (keep existing code compiling) -->
+    <color name="notion_bg">@color/doom_bg</color>
+    <color name="notion_surface">@color/doom_surface</color>
+    <color name="notion_surface_alt">@color/doom_surface_alt</color>
+    <color name="notion_border">@color/doom_border</color>
+    <color name="notion_text_primary">@color/doom_text</color>
+    <color name="notion_text_secondary">@color/doom_text_secondary</color>
+    <color name="notion_text_muted">@color/doom_muted</color>
+    <color name="notion_accent">@color/doom_primary</color>
+
+    <!-- Nav bar tint -->
+    <color name="bottom_nav_item">@color/doom_muted</color>
+
+    <color name="paper">#FF0F1115</color>
+    <color name="ink">#FFF4F6F8</color>
+    <color name="quiet_gray">#FF181C24</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 </resources>

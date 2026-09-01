@@ -1,13 +1,24 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Legacy theme — OLED black -->
     <style name="Theme.Doomly" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/ink</item>
-        <item name="colorPrimaryVariant">@color/ink</item>
-        <item name="colorOnPrimary">@color/paper</item>
-        <item name="colorSecondary">@color/quiet_gray</item>
-        <item name="colorOnSecondary">@color/ink</item>
-        <item name="android:fontFamily">sans</item>
-        <item name="android:navigationBarColor">@color/paper</item>
-        <item name="android:statusBarColor">@color/paper</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="colorPrimary">@color/doom_primary</item>
+        <item name="colorPrimaryVariant">@color/doom_primary</item>
+        <item name="colorOnPrimary">@color/doom_bg</item>
+        <item name="colorSecondary">@color/doom_surface_alt</item>
+        <item name="colorOnSecondary">@color/doom_text</item>
+        <item name="android:colorBackground">@color/doom_bg</item>
+        <item name="android:windowBackground">@color/doom_bg</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:navigationBarColor">@color/doom_bg</item>
+        <item name="android:statusBarColor">@color/doom_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- Compose theme — OLED black background, transparent bars -->
+    <style name="Theme.Doomly.Compose" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/doom_bg</item>
+        <item name="android:statusBarColor">@color/doom_bg</item>
+        <item name="android:navigationBarColor">@color/doom_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Widget.Doomly.Card" parent="Widget.MaterialComponents.CardView">
+        <item name="cardBackgroundColor">@color/doom_surface</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="strokeColor">@color/doom_border</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="cardUseCompatPadding">false</item>
+    </style>
+
+    <style name="Widget.Doomly.Chip" parent="android:Widget.TextView">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/doom_text</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingTop">10dp</item>
+        <item name="android:paddingBottom">10dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:background">@color/doom_surface</item>
+        <item name="android:drawableTint">@color/doom_muted</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <style name="Widget.Doomly.Button" parent="Widget.MaterialComponents.Button">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textSize">14sp</item>
+        <item name="cornerRadius">14dp</item>
+        <item name="android:minHeight">54dp</item>
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetRight">0dp</item>
+    </style>
+
+    <style name="Widget.Doomly.Button.Primary" parent="Widget.Doomly.Button">
+        <item name="backgroundTint">@color/doom_primary</item>
+        <item name="android:textColor">@color/doom_bg</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Widget.Doomly.Button.Ghost" parent="Widget.Doomly.Button">
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="android:textColor">@color/doom_text_secondary</item>
+        <item name="strokeColor">@color/doom_border</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <style name="Widget.Doomly.Button.Text" parent="Widget.Doomly.Button">
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="android:textColor">@color/doom_text_secondary</item>
+        <item name="android:minHeight">40dp</item>
+    </style>
+
+    <style name="Widget.Doomly.BottomNav" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="android:background">@color/doom_bg</item>
+        <item name="itemRippleColor">@color/doom_surface_alt</item>
+        <item name="itemIconSize">22dp</item>
+        <item name="itemHorizontalTranslationEnabled">false</item>
+        <item name="labelVisibilityMode">unlabeled</item>
+    </style>
+
+    <style name="Widget.Doomly.TextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.FilledBox">
+        <item name="boxBackgroundColor">@color/doom_surface</item>
+        <item name="boxStrokeColor">@color/doom_border</item>
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="hintTextColor">@color/doom_muted</item>
+        <item name="android:textColorHint">@color/doom_muted</item>
+    </style>
+
+    <style name="TextAppearance.Doomly.Title" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="android:textSize">28sp</item>
+        <item name="android:textColor">@color/doom_text</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.Doomly.Subtitle" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:textSize">13sp</item>
+        <item name="android:textColor">@color/doom_muted</item>
+    </style>
+
+    <style name="TextAppearance.Doomly.Body" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/doom_text_secondary</item>
+    </style>
+
+    <style name="TextAppearance.Doomly.Label" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textSize">11sp</item>
+        <item name="android:textColor">@color/doom_muted</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.06</item>
+    </style>
+
+    <style name="TextAppearance.Doomly.Stat" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/doom_text</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.Doomly.StatValue" parent="TextAppearance.MaterialComponents.Headline5">
+        <item name="android:textSize">22sp</item>
+        <item name="android:textColor">@color/doom_primary</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+</resources>

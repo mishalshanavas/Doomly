@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Fire/flame icon -->
+    <path
+        android:fillColor="#FF6CFF8D"
+        android:pathData="M12,2C12,2 8,9 8,14C8,16.2 9.8,18 12,18C14.2,18 16,16.2 16,14C16,9 12,2 12,2Z" />
+    <path
+        android:fillColor="#FF95A1B2"
+        android:pathData="M10.5,20C10.5,20 9,19 9,17C9,15.5 10,14.5 12,14.5C14,14.5 15,15.5 15,17C15,19 13.5,20 13.5,20H10.5Z" />
+</vector>
