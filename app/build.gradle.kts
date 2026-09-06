@@ -114,3 +114,15 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }
+
+tasks.register("extractApksForDebug") {
+    group = "build"
+    description = "Alias for extractApksForGithubDebug to resolve ambiguity"
+    dependsOn("extractApksForGithubDebug")
+}
+
+tasks.register("extractApksForRelease") {
+    group = "build"
+    description = "Alias for extractApksForGithubRelease to resolve ambiguity"
+    dependsOn("extractApksForGithubRelease")
+}
