@@ -148,18 +148,12 @@ jobs:
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" release-artifacts/* --clobber
-          else
-            gh release create "$GITHUB_REF_NAME" release-artifacts/* \
-              --verify-tag \
-              --title "Doomly $DOOMLY_VERSION_NAME" \
-              --generate-notes
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Doomly ${{ env.DOOMLY_VERSION_NAME }}
+          generate_release_notes: true
+          files: release-artifacts/*
+          fail_on_unmatched_files: true
 
       - name: Remove signing material
         if: always()
