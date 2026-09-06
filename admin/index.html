@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Doomly admin</title>
+  <style>
+    :root { color-scheme: dark; --bg:#090b0f; --panel:#141820; --line:#29303b; --text:#f4f6f8; --muted:#98a2b3; --accent:#e9eef5; --ink:#0b0d11; --good:#82e6bd; --bad:#ff8d96; }
+    * { box-sizing:border-box; } body { margin:0; min-height:100vh; background:radial-gradient(circle at top,#1b222d 0,#090b0f 46%); color:var(--text); font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif; }
+    main { width:min(680px,100%); margin:0 auto; padding:42px 20px 60px; } h1 { margin:0; font-size:32px; letter-spacing:-.04em; } h1 span { color:var(--muted); font-size:14px; letter-spacing:.08em; text-transform:uppercase; margin-left:8px; }
+    .sub { color:var(--muted); margin:8px 0 26px; } .card { background:color-mix(in srgb,var(--panel) 92%,transparent); border:1px solid var(--line); border-radius:20px; padding:20px; box-shadow:0 20px 60px #0005; }
+    label { display:block; color:var(--muted); font-size:12px; letter-spacing:.08em; text-transform:uppercase; margin:16px 0 7px; } input,textarea { width:100%; border:1px solid var(--line); border-radius:12px; background:#0d1117; color:var(--text); padding:12px 13px; font:inherit; } textarea { min-height:120px; resize:vertical; }
+    button { border:0; border-radius:12px; background:var(--accent); color:var(--ink); padding:12px 16px; font-weight:700; cursor:pointer; } button.secondary { background:transparent; border:1px solid var(--line); color:var(--text); } button:disabled { opacity:.5; cursor:wait; }
+    .row { display:flex; gap:10px; align-items:center; justify-content:space-between; } .account { color:var(--muted); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .hidden { display:none; } .status { margin-top:15px; min-height:24px; color:var(--muted); } .status.good { color:var(--good); } .status.bad { color:var(--bad); }
+    .notice { border:1px solid #3a424f; border-radius:12px; padding:11px 13px; color:var(--muted); font-size:13px; margin-bottom:14px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Doomly <span>admin</span></h1>
+    <p class="sub">Send a focused update to one signed-in device.</p>
+    <section id="login" class="card">
+      <div class="notice">Admin access is restricted by the Supabase <code>ADMIN_EMAILS</code> allowlist.</div>
+      <button id="loginButton">Continue with Google</button>
+      <div id="loginStatus" class="status"></div>
+    </section>
+    <section id="panel" class="card hidden">
+      <div class="row"><div id="account" class="account"></div><button id="logoutButton" class="secondary">Sign out</button></div>
+      <label for="uid">Target user UUID</label>
+      <input id="uid" autocomplete="off" placeholder="e.g. 7d…" />
+      <label for="title">Title</label>
+      <input id="title" maxlength="80" value="Doomly update" />
+      <label for="body">Message</label>
+      <textarea id="body" maxlength="500" placeholder="Write the notification…"></textarea>
+      <div style="margin-top:16px"><button id="sendButton">Send notification</button></div>
+      <div id="status" class="status"></div>
+    </section>
+  </main>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    const SUPABASE_URL = 'https://eiireynwlctlmltohwve.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpaXJleW53bGN0bG1sdG9od3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MTAyNzIsImV4cCI6MjA5NjQ4NjI3Mn0.uzmjGuHgDy_Vdyh48IYmOm-Ock4vbOcVuqNkK2HOb1Y';
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const $ = id => document.getElementById(id);
+    const setStatus = (node, text, good = false) => { node.textContent = text; node.className = `status ${good ? 'good' : 'bad'}`; };
+
+    function render(session) {
+      $('login').classList.toggle('hidden', !!session);
+      $('panel').classList.toggle('hidden', !session);
+      if (session) $('account').textContent = session.user.email || session.user.id;
+    }
+    $('loginButton').onclick = async () => {
+      $('loginButton').disabled = true;
+      const { error } = await supabase.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: location.href } });
+      if (error) { setStatus($('loginStatus'), error.message); $('loginButton').disabled = false; }
+    };
+    $('logoutButton').onclick = () => supabase.auth.signOut();
+    $('sendButton').onclick = async () => {
+      const uid = $('uid').value.trim(), title = $('title').value.trim(), body = $('body').value.trim();
+      if (!uid || !title || !body) return setStatus($('status'), 'Fill in the user UUID, title, and message.');
+      $('sendButton').disabled = true; setStatus($('status'), 'Sending…', true);
+      const { data, error } = await supabase.functions.invoke('admin-notify', { body:{ uid, title, body } });
+      $('sendButton').disabled = false;
+      if (error) return setStatus($('status'), error.message);
+      setStatus($('status'), `Sent to ${data?.sent ?? 0} device(s).`, true);
+    };
+    const { data } = await supabase.auth.getSession(); render(data.session);
+    supabase.auth.onAuthStateChange((_event, session) => render(session));
+  </script>
+</body>
+</html>
