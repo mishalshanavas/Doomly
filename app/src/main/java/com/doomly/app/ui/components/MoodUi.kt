@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
@@ -80,6 +81,11 @@ fun DottedOrbit(
     mascotScale: Float = .29f
 ) {
     val p = progress.coerceIn(0f, 1f)
+    val backgroundColor = Void
+    val foregroundColor = Frost
+    val pixelColor = PanelRaised
+    val outlineColor = Hairline
+    val inactiveDotColor = Smoke
     val motion = rememberInfiniteTransition(label = "Doomly mascot motion")
     val orbitPhase by motion.animateFloat(
         initialValue = 0f,
@@ -121,7 +127,7 @@ fun DottedOrbit(
                 val normalized = (ring + index.toFloat() / count) / rings
                 val active = normalized <= p
                 drawCircle(
-                    color = if (active) Frost else Smoke.copy(alpha = .38f),
+                    color = if (active) foregroundColor else inactiveDotColor.copy(alpha = .38f),
                     radius = if (active) 2.05f else 1.45f,
                     center = Offset(
                         center.x + cos(angle).toFloat() * radius,
@@ -130,26 +136,55 @@ fun DottedOrbit(
                 )
             }
         }
-        drawPixelDoomly(center, size.minDimension * mascotScale * breath, eyeOpen)
+        drawPixelDoomly(
+            center = center,
+            diameter = size.minDimension * mascotScale * breath,
+            eyeOpen = eyeOpen,
+            pupilOffset = sin(orbitPhase * .5f) * .55f,
+            backgroundColor = backgroundColor,
+            pixelColor = pixelColor,
+            eyeColor = foregroundColor,
+            outlineColor = outlineColor
+        )
     }
 }
 
 @Composable
 fun DoomAvatar(@Suppress("UNUSED_PARAMETER") progress: Float, modifier: Modifier = Modifier) {
+    val backgroundColor = Void
+    val foregroundColor = Frost
+    val pixelColor = PanelRaised
+    val outlineColor = Hairline
     Canvas(modifier.semantics { contentDescription = "Doomly mascot" }) {
-        drawPixelDoomly(Offset(size.width / 2f, size.height / 2f), size.minDimension)
+        drawPixelDoomly(
+            center = Offset(size.width / 2f, size.height / 2f),
+            diameter = size.minDimension,
+            backgroundColor = backgroundColor,
+            pixelColor = pixelColor,
+            eyeColor = foregroundColor,
+            outlineColor = outlineColor
+        )
     }
 }
 
 /** Draws the icon character as a crisp 17×17 pixel matrix at any Compose size. */
-private fun DrawScope.drawPixelDoomly(center: Offset, diameter: Float, eyeOpen: Float = 1f) {
+private fun DrawScope.drawPixelDoomly(
+    center: Offset,
+    diameter: Float,
+    eyeOpen: Float = 1f,
+    pupilOffset: Float = 0f,
+    backgroundColor: Color,
+    pixelColor: Color,
+    eyeColor: Color,
+    outlineColor: Color
+) {
     val gridSize = 17
     val cell = diameter / gridSize
     val pixelSize = cell * .72f
     val radius = diameter / 2f
 
-    drawCircle(Void, radius, center)
-    drawCircle(Hairline.copy(alpha = .8f), radius, center, style = Stroke(cell * .28f))
+    drawCircle(backgroundColor, radius, center)
+    drawCircle(outlineColor.copy(alpha = .8f), radius, center, style = Stroke(cell * .28f))
 
     repeat(gridSize) { row ->
         repeat(gridSize) { column ->
@@ -159,7 +194,7 @@ private fun DrawScope.drawPixelDoomly(center: Offset, diameter: Float, eyeOpen: 
                 (y - center.y) * (y - center.y) <= (radius - cell * .55f) * (radius - cell * .55f)
             if (insideFace) {
                 drawRect(
-                    color = PanelRaised.copy(alpha = .72f),
+                    color = pixelColor.copy(alpha = .72f),
                     topLeft = Offset(x - pixelSize / 2f, y - pixelSize / 2f),
                     size = Size(pixelSize, pixelSize)
                 )
@@ -175,12 +210,22 @@ private fun DrawScope.drawPixelDoomly(center: Offset, diameter: Float, eyeOpen: 
                 val x = center.x + (startColumn + column - (gridSize - 1) / 2f) * cell
                 val y = center.y + (row + 4 - (gridSize - 1) / 2f) * cell * open
                 drawRect(
-                    color = Frost,
+                    color = eyeColor,
                     topLeft = Offset(x - pixelSize / 2f, y - pixelSize * open / 2f),
                     size = Size(pixelSize, pixelSize * open)
                 )
             }
         }
+    }
+
+    // Matching pupils move together very slightly, giving the mascot a curious gaze.
+    listOf(4.5f, 11.5f).forEach { eyeCenter ->
+        val pupilX = center.x + (eyeCenter + pupilOffset - (gridSize - 1) / 2f) * cell
+        drawRect(
+            color = eyeColor,
+            topLeft = Offset(pupilX - pixelSize * .36f, center.y - pixelSize * open * .36f),
+            size = Size(pixelSize * .72f, pixelSize * open * .72f)
+        )
     }
 }
 

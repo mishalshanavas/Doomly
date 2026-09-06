@@ -48,12 +48,13 @@ fun DoomlyNav(resumeCount: Int = 0) {
     }
 
     val start = if (DeviceReadiness.accessibilityEnabled(context) && signedIn) Route.HOME else Route.PERMISSIONS
+    val navigationDivider = Hairline
 
     Scaffold(
         containerColor = Void,
         bottomBar = {
             if (ready && route != Route.PERMISSIONS) NavigationBar(
-                modifier = Modifier.drawBehind { drawLine(Hairline, start = androidx.compose.ui.geometry.Offset.Zero, end = androidx.compose.ui.geometry.Offset(size.width, 0f)) },
+                modifier = Modifier.drawBehind { drawLine(navigationDivider, start = androidx.compose.ui.geometry.Offset.Zero, end = androidx.compose.ui.geometry.Offset(size.width, 0f)) },
                 containerColor = Void,
                 tonalElevation = 0.dp
             ) {
