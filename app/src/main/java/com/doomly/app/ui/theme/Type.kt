@@ -6,21 +6,26 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-private val Rounded = FontFamily.SansSerif
+private val Sans = FontFamily.SansSerif
+private val Editorial = FontFamily.Serif
+private fun sans(weight: FontWeight, size: Int, line: Int, spacing: Float = 0f) =
+    TextStyle(fontFamily = Sans, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp, letterSpacing = spacing.sp)
+private fun editorial(weight: FontWeight, size: Int, line: Int, spacing: Float = 0f) =
+    TextStyle(fontFamily = Editorial, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp, letterSpacing = spacing.sp)
 
 val DoomlyTypography = Typography(
-    displayLarge = TextStyle(fontFamily = Rounded, fontWeight = FontWeight.Black, fontSize = 64.sp, lineHeight = 68.sp, letterSpacing = (-1.5).sp),
-    displayMedium = TextStyle(fontFamily = Rounded, fontWeight = FontWeight.Black, fontSize = 44.sp, lineHeight = 48.sp, letterSpacing = (-1).sp),
-    headlineLarge = TextStyle(fontFamily = Rounded, fontWeight = FontWeight.Black, fontSize = 32.sp, lineHeight = 37.sp, letterSpacing = (-0.6).sp),
-    headlineMedium = TextStyle(fontFamily = Rounded, fontWeight = FontWeight.ExtraBold, fontSize = 26.sp, lineHeight = 31.sp, letterSpacing = (-0.4).sp),
-    headlineSmall = TextStyle(fontFamily = Rounded, fontWeight = FontWeight.ExtraBold, fontSize = 21.sp, lineHeight = 26.sp),
-    titleLarge = TextStyle(fontFamily = Rounded, fontWeight = FontWeight.Bold, fontSize = 19.sp, lineHeight = 24.sp),
-    titleMedium = TextStyle(fontFamily = Rounded, fontWeight = FontWeight.Bold, fontSize = 16.sp, lineHeight = 21.sp),
-    titleSmall = TextStyle(fontFamily = Rounded, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 19.sp),
-    bodyLarge = TextStyle(fontFamily = Rounded, fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 23.sp),
-    bodyMedium = TextStyle(fontFamily = Rounded, fontWeight = FontWeight.Medium, fontSize = 14.sp, lineHeight = 20.sp),
-    bodySmall = TextStyle(fontFamily = Rounded, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 17.sp),
-    labelLarge = TextStyle(fontFamily = Rounded, fontWeight = FontWeight.Bold, fontSize = 15.sp, lineHeight = 20.sp),
-    labelMedium = TextStyle(fontFamily = Rounded, fontWeight = FontWeight.Bold, fontSize = 12.sp, lineHeight = 16.sp),
-    labelSmall = TextStyle(fontFamily = Rounded, fontWeight = FontWeight.Bold, fontSize = 10.sp, lineHeight = 14.sp)
+    displayLarge = sans(FontWeight.Normal, 54, 58, -1.8f),
+    displayMedium = sans(FontWeight.Normal, 40, 44, -1.1f),
+    headlineLarge = editorial(FontWeight.Normal, 32, 38, -.6f),
+    headlineMedium = editorial(FontWeight.Normal, 26, 32, -.3f),
+    headlineSmall = editorial(FontWeight.Normal, 21, 27),
+    titleLarge = sans(FontWeight.Medium, 19, 25, -.2f),
+    titleMedium = sans(FontWeight.Medium, 15, 21),
+    titleSmall = sans(FontWeight.Medium, 13, 18),
+    bodyLarge = sans(FontWeight.Normal, 16, 24),
+    bodyMedium = sans(FontWeight.Normal, 14, 21),
+    bodySmall = sans(FontWeight.Normal, 12, 18),
+    labelLarge = sans(FontWeight.Medium, 14, 19, .1f),
+    labelMedium = sans(FontWeight.Medium, 12, 16, .2f),
+    labelSmall = sans(FontWeight.Medium, 10, 14, .35f)
 )

@@ -2,14 +2,9 @@
     <string name="app_name">Doomly</string>
     <string name="doomly_google_web_client_id"></string>
     <string name="accessibility_service_label">Doomly Reel Counter</string>
-    <string name="accessibility_service_description">Counts Instagram Reels you watch so Doomly can track local streaks, XP, and funny doomscroll stats. Doomly does not read passwords or type for you.</string>
+    <string name="accessibility_service_description">Inspects visible Instagram screen labels locally to recognize Reels and count them. Original screen text is not stored or uploaded, and Doomly never taps or types for you.</string>
     <string name="supabase_url">https://eiireynwlctlmltohwve.supabase.co</string>
     <string name="supabase_anon_key">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpaXJleW53bGN0bG1sdG9od3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5MTAyNzIsImV4cCI6MjA5NjQ4NjI3Mn0.uzmjGuHgDy_Vdyh48IYmOm-Ock4vbOcVuqNkK2HOb1Y</string>
-    <string name="foreground_channel_name">Doomly Tracker</string>
-    <string name="foreground_channel_desc">Keeps Doomly running to count reels in the background.</string>
-    <string name="foreground_notification_title">Doomly is running</string>
-    <string name="foreground_notification_body">Counting reels while Instagram is open.</string>
-
     <!-- UI labels -->
     <string name="tab_today">Today</string>
     <string name="tab_league">League</string>

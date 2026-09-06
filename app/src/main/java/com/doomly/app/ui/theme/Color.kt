@@ -2,14 +2,18 @@ package com.doomly.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Sunshine = Color(0xFFFFD84D)
-val SunshineSoft = Color(0xFFFFE98D)
-val Ink = Color(0xFF171717)
-val Paper = Color(0xFFFFFBF2)
-val Card = Color(0xFFFFFFFF)
-val Muted = Color(0xFF777267)
-val Line = Color(0xFFE9E2D3)
-val Coral = Color(0xFFFF6B57)
-val Mint = Color(0xFF83D9B0)
-val Sky = Color(0xFF85C9F4)
-val Lavender = Color(0xFFB7A6F6)
+// Warm monochrome: quiet for everyday use, with a restrained playful accent.
+val Void = Color(0xFFF9F9F6)
+val Panel = Color(0xFFF1F1EE)
+val PanelRaised = Color(0xFFE8E8E3)
+val Hairline = Color(0xFFDEDED8)
+val Frost = Color(0xFF1B1B19)
+val Smoke = Color(0xFF76766F)
+val Acid = Color(0xFF1B1B19)
+val Mint = Color(0xFFB7D957)
+val Aqua = Color(0xFFCFDDD8)
+val Peach = Color(0xFFEFC8AE)
+val Violet = Color(0xFFD6D0E5)
+val Danger = Color(0xFF9F3B36)
+val Muted = Smoke
+val Coral = Danger

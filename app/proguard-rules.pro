@@ -30,7 +30,6 @@
 
 # ── Data classes (used via reflection / JSON parsing) ───────────────────
 -keep class com.doomly.app.DoomStatsStore$Snapshot { *; }
--keep class com.doomly.app.DoomStatsStore$DebugSnapshot { *; }
 -keep class com.doomly.app.data.LeaderboardRepository$LeaderboardEntry { *; }
 -keep class com.doomly.app.data.SupabaseConfig { *; }
 -keep class com.doomly.app.data.SupabaseSession { *; }
@@ -43,8 +42,13 @@
 
 # ── Accessibility service ───────────────────────────────────────────────
 -keep class com.doomly.app.DoomlyAccessibilityService { *; }
--keep class com.doomly.app.DoomlyForegroundService { *; }
--keep class com.doomly.app.DoomlyBootReceiver { *; }
+
+# Strip verbose diagnostics from production builds while preserving warnings and errors.
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}
 
 # ── ResultCallback (used across modules) ────────────────────────────────
 -keep class com.doomly.app.ResultCallback { *; }

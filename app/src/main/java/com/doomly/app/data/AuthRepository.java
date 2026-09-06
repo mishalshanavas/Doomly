@@ -118,7 +118,8 @@ public final class AuthRepository {
     /** Handle deep link from Chrome after Google OAuth completes. */
     public boolean handleDeepLink(Activity activity, Uri uri) {
         if (uri == null) return false;
-        Log.d(TAG, "Deep link: " + uri);
+        // Never log the full callback URI: its fragment contains session tokens.
+        Log.d(TAG, "OAuth callback received for " + uri.getScheme() + "://" + uri.getAuthority() + uri.getPath());
 
         // Tokens come as fragment: #access_token=xxx&refresh_token=yyy&...
         String fragment = uri.getFragment();
@@ -184,7 +185,7 @@ public final class AuthRepository {
                     SecureAuthStore.put(activity, KEY_REFRESH, refresh != null ? refresh : "");
 
                     if (!name.isEmpty()) DoomStatsStore.setDisplayName(activity, name);
-                    Log.d(TAG, "Google sign-in success: " + uid);
+                    Log.d(TAG, "Google sign-in success");
 
                     // Pull existing cloud data to restore user's stats
                     StatsRepository.getInstance().pullFromCloud(activity, uid, new ResultCallback<Void>() {

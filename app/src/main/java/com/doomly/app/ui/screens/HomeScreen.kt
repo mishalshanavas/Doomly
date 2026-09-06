@@ -2,33 +2,39 @@ package com.doomly.app.ui.screens
 
 import android.content.Context
 import android.content.ContextWrapper
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.NorthEast
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.*
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.doomly.app.*
-import com.doomly.app.ui.components.MoodFace
-import com.doomly.app.ui.components.SoftCard
+import com.doomly.app.ui.components.*
 import com.doomly.app.ui.theme.*
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import kotlin.math.roundToInt
 
 @Composable
 fun HomeScreen(viewModel: TodayViewModel = viewModel()) {
@@ -41,123 +47,157 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel()) {
 
     DisposableEffect(owner) {
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh() }
-        owner.lifecycle.addObserver(observer); viewModel.refresh()
+        owner.lifecycle.addObserver(observer)
+        viewModel.refresh()
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
 
     val reels = snapshot?.todayReels ?: 0
+    val total = snapshot?.totalReels ?: 0
+    val streak = snapshot?.streak ?: 0
     val target = snapshot?.dailyTarget?.coerceAtLeast(1) ?: DoomStatsStore.DEFAULT_DAILY_TARGET
     val progress = (reels.toFloat() / target).coerceIn(0f, 1f)
-    val animatedReels by animateIntAsState(reels, tween(550), label = "reels")
+    val animatedReels by animateIntAsState(reels, tween(450), label = "reels")
     val animatedProgress by animateFloatAsState(progress, tween(700), label = "progress")
-    val history = DoomStatsStore.dailyHistory(context)
+    val percent = (animatedProgress * 100).roundToInt()
 
-    if (editGoal) AlertDialog(
-        onDismissRequest = { editGoal = false },
-        title = { Text("Choose your daily goal") },
-        text = { OutlinedTextField(goalText, { goalText = it.filter(Char::isDigit).take(5) }, label = { Text("Reels per day") }, singleLine = true) },
-        confirmButton = { Button(onClick = {
+    if (editGoal) GoalDialog(
+        value = goalText,
+        onValue = { goalText = it },
+        onSave = {
             CloudSyncScheduler.updateDailyTarget(context, goalText.toIntOrNull()?.coerceIn(1, 20_000) ?: target, quietCallback())
-            viewModel.refresh(); editGoal = false
-        }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = { editGoal = false }) { Text("Cancel") } }
+            viewModel.refresh()
+            editGoal = false
+        },
+        onDismiss = { editGoal = false }
     )
 
-    Column(Modifier.fillMaxSize().background(Sunshine).verticalScroll(rememberScrollState())) {
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(top = 24.dp, bottom = 26.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+    Column(
+        Modifier.fillMaxSize().background(Void).verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp)
+    ) {
+        Spacer(Modifier.height(26.dp))
+        PageHeader(
+            title = "Dashboard",
+            subtitle = "Welcome back. Your thumb has been busy.",
+            trailing = { StatusPill("TRACKING") }
+        )
+        Spacer(Modifier.height(12.dp))
+
+        DottedOrbit(animatedProgress, Modifier.fillMaxWidth().height(190.dp))
+
+        Text("$percent%", style = MaterialTheme.typography.displayMedium, color = Frost)
+        Text(
+            if (progress >= 1f) "of today’s goal — completed. The algorithm salutes you."
+            else "of today’s goal — $animatedReels of $target Reels counted.",
+            style = MaterialTheme.typography.bodySmall,
+            color = Muted
+        )
+        Spacer(Modifier.height(18.dp))
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DashboardMetric("CURRENT STREAK", if (streak == 1) "1 day" else "$streak days", Modifier.weight(1f))
+            DashboardMetric("GOAL REMAINING", "${(target - reels).coerceAtLeast(0)} Reels", Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(8.dp))
+
+        PremiumCard(
+            Modifier.fillMaxWidth().semantics { role = Role.Button }.clickable {
+                goalText = target.toString()
+                editGoal = true
+            }
         ) {
-            Text(LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMM d")), style = MaterialTheme.typography.labelMedium, color = Ink.copy(alpha = .58f))
-            Text("Today", style = MaterialTheme.typography.headlineSmall)
-            Spacer(Modifier.height(22.dp))
-            MoodFace(animatedProgress, Modifier.width(180.dp))
-            Text(moodLabel(progress), style = MaterialTheme.typography.headlineLarge)
-            Text("$animatedReels reels", style = MaterialTheme.typography.titleMedium, color = Ink.copy(alpha = .62f))
-            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("DAILY LIMIT", style = MaterialTheme.typography.labelSmall, color = Muted)
+                    Spacer(Modifier.height(6.dp))
+                    Text("$target Reels", style = MaterialTheme.typography.titleMedium)
+                    Text("Tap to edit your definition of ‘just one more.’", style = MaterialTheme.typography.bodySmall, color = Muted)
+                }
+                Icon(Icons.Rounded.Edit, "Edit daily goal", tint = Frost, modifier = Modifier.size(19.dp))
+            }
+        }
+
+        Spacer(Modifier.height(22.dp))
+        SectionLabel("Next milestone", "LEVEL ${MotivationEngine.level(total)}")
+        Spacer(Modifier.height(8.dp))
+        PremiumCard(Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(42.dp).background(Frost, RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) { Icon(Icons.Rounded.NorthEast, null, tint = Void, modifier = Modifier.size(20.dp)) }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(milestoneTitle(reels), style = MaterialTheme.typography.titleMedium)
+                    Text(milestoneCopy(reels), style = MaterialTheme.typography.bodySmall, color = Muted)
+                }
+                Text("${reels % 25}/25", style = MaterialTheme.typography.labelMedium)
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+        Row(
+            Modifier.fillMaxWidth().background(Mint.copy(alpha = .22f), RoundedCornerShape(14.dp)).padding(15.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("NOTE", style = MaterialTheme.typography.labelSmall, color = Frost)
+            Spacer(Modifier.width(12.dp))
             Text(
-                coach ?: MotivationEngine.message(reels, target, snapshot?.streak ?: 0),
-                style = MaterialTheme.typography.bodyMedium, color = Ink.copy(alpha = .72f),
-                textAlign = TextAlign.Center, modifier = Modifier.widthIn(max = 310.dp)
+                coach ?: MotivationEngine.message(reels, target, streak),
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f)
             )
         }
 
-        Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp))
-                .background(Paper).padding(horizontal = 20.dp, vertical = 22.dp)
+        Spacer(Modifier.height(18.dp))
+        Button(
+            onClick = {
+                CloudSyncScheduler.scheduleSync(context)
+                (context.findActivity() as? MainActivity)?.openInstagram()
+            },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Frost, contentColor = Void)
         ) {
-            SoftCard(Modifier.fillMaxWidth().clickable { goalText = target.toString(); editGoal = true }) {
-                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                    Column {
-                        Text("Daily journey", style = MaterialTheme.typography.titleMedium)
-                        Text("${MotivationEngine.remaining(reels, target)} reels to go", style = MaterialTheme.typography.bodySmall, color = Muted)
-                    }
-                    Text("${(progress * 100).toInt()}%", style = MaterialTheme.typography.titleLarge, color = Coral)
-                }
-                Spacer(Modifier.height(14.dp))
-                LinearProgressIndicator(
-                    progress = { animatedProgress }, modifier = Modifier.fillMaxWidth().height(10.dp).clip(CircleShape),
-                    color = Coral, trackColor = SunshineSoft
-                )
-                Spacer(Modifier.height(10.dp))
-                Text("Tap to change your $target Reel goal", style = MaterialTheme.typography.labelSmall, color = Muted)
-            }
-
-            Spacer(Modifier.height(18.dp))
-            WeekStrip(history, reels)
-            Spacer(Modifier.height(18.dp))
-            Button(
-                onClick = { CloudSyncScheduler.scheduleSync(context); (context.findActivity() as? MainActivity)?.openInstagram() },
-                modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(18.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Ink, contentColor = Color.White)
-            ) { Text(if (progress >= 1f) "Beat today's best" else "Open Instagram") }
-            Spacer(Modifier.height(18.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MiniStat("🔥", "${snapshot?.streak ?: 0}", "day streak", Modifier.weight(1f))
-                MiniStat("✨", "${MotivationEngine.level(snapshot?.totalReels ?: 0)}", "level", Modifier.weight(1f))
-            }
-            Spacer(Modifier.height(20.dp))
+            Text(if (progress >= 1f) "Keep scrolling anyway" else "Open Reels", fontWeight = FontWeight.Medium)
+            Spacer(Modifier.width(8.dp))
+            Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, modifier = Modifier.size(18.dp))
         }
+        Spacer(Modifier.height(28.dp))
     }
 }
 
 @Composable
-private fun WeekStrip(history: Map<String, Int>, todayReels: Int) {
-    SoftCard(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-            Text("This week", style = MaterialTheme.typography.titleMedium)
-            Text("Keep your rhythm", style = MaterialTheme.typography.labelSmall, color = Muted)
-        }
-        Spacer(Modifier.height(14.dp))
-        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-            (6 downTo 0).map { LocalDate.now().minusDays(it.toLong()) }.forEach { day ->
-                val count = if (day == LocalDate.now()) todayReels else history[day.toString()] ?: 0
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(day.format(DateTimeFormatter.ofPattern("E")).take(1), style = MaterialTheme.typography.labelSmall, color = Muted)
-                    Spacer(Modifier.height(6.dp))
-                    Box(Modifier.size(34.dp).clip(RoundedCornerShape(11.dp)).background(if (count > 0) Sunshine else Color(0xFFF2EEE6)), Alignment.Center) {
-                        Text(if (count > 0) "•" else "–", style = MaterialTheme.typography.titleLarge)
-                    }
-                }
-            }
-        }
+private fun DashboardMetric(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier.background(Panel, RoundedCornerShape(14.dp)).padding(14.dp)) {
+        Text(label, style = MaterialTheme.typography.labelSmall, color = Muted)
+        Spacer(Modifier.height(12.dp))
+        Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1)
     }
 }
 
 @Composable
-private fun MiniStat(icon: String, value: String, label: String, modifier: Modifier) {
-    SoftCard(modifier) {
-        Text(icon, style = MaterialTheme.typography.titleLarge); Spacer(Modifier.height(8.dp))
-        Text(value, style = MaterialTheme.typography.headlineSmall)
-        Text(label, style = MaterialTheme.typography.bodySmall, color = Muted)
-    }
+private fun GoalDialog(value: String, onValue: (String) -> Unit, onSave: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Set a daily limit") },
+        text = {
+            OutlinedTextField(
+                value = value,
+                onValueChange = { onValue(it.filter(Char::isDigit).take(5)) },
+                label = { Text("Reels per day") },
+                supportingText = { Text("Ambitious, but make it survivable.") },
+                singleLine = true
+            )
+        },
+        confirmButton = { Button(onClick = onSave, enabled = value.toIntOrNull() != null) { Text("Save") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
-private fun moodLabel(progress: Float) = when {
-    progress >= 1f -> "Unstoppable"; progress >= .65f -> "Happy"
-    progress >= .25f -> "Warming up"; else -> "Ready"
-}
-
+private fun milestoneTitle(reels: Int) = if (reels > 0 && reels % 25 == 0) "Milestone unlocked" else "The tiny thumb marathon"
+private fun milestoneCopy(reels: Int) = if (reels > 0 && reels % 25 == 0) "Twenty-five down. Hydrate the thumb." else "${25 - reels % 25} more to your next ridiculous achievement."
 private fun quietCallback() = object : ResultCallback<Void> {
     override fun onSuccess(value: Void?) = Unit
     override fun onError(message: String) = Unit

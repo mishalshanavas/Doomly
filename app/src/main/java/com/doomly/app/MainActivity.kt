@@ -1,19 +1,13 @@
 package com.doomly.app
 
-import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.os.PowerManager
-import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.core.content.ContextCompat
 import com.doomly.app.data.AuthRepository
 import com.doomly.app.ui.navigation.DoomlyNav
 import com.doomly.app.ui.theme.DoomlyTheme
@@ -36,7 +30,10 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        AuthRepository.getInstance().handleDeepLink(this, intent.data)
+        if (AuthRepository.getInstance().handleDeepLink(this, intent.data)) {
+            // Consume the callback so onResume cannot process the same tokens twice.
+            setIntent(Intent(this, MainActivity::class.java))
+        }
     }
 
     override fun onResume() {
@@ -53,22 +50,10 @@ class MainActivity : ComponentActivity() {
             setIntent(Intent(this, MainActivity::class.java))
         }
 
-        if (isAccessibilityServiceEnabled()) {
-            ContextCompat.startForegroundService(this, Intent(this, DoomlyForegroundService::class.java))
-        }
-
         CloudSyncScheduler.scheduleSync(this)
     }
 
     // ── Public helpers ──────────────────────────────────────────────────
-
-    fun isIgnoringBatteryOptimizations(): Boolean {
-        return DeviceReadiness.batteryOptimizationDisabled(this)
-    }
-
-    fun requestIgnoreBatteryOptimizations() {
-        DeviceReadiness.requestBatteryExemption(this)
-    }
 
     fun isAccessibilityServiceEnabled(): Boolean {
         return DeviceReadiness.accessibilityEnabled(this)

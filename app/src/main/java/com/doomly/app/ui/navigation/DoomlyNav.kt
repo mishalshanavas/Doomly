@@ -2,13 +2,13 @@ package com.doomly.app.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.BarChart
-import androidx.compose.material.icons.rounded.Face
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -30,12 +30,15 @@ fun DoomlyNav(resumeCount: Int = 0) {
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
     var signedIn by remember { mutableStateOf(AuthRepository.getInstance().isSignedIn(context)) }
-    var ready by remember { mutableStateOf(false) }
+    var ready by remember {
+        mutableStateOf(
+            DeviceReadiness.accessibilityEnabled(context) && signedIn
+        )
+    }
 
     LaunchedEffect(resumeCount, signedIn) {
         signedIn = AuthRepository.getInstance().isSignedIn(context)
-        ready = DeviceReadiness.accessibilityEnabled(context) &&
-            DeviceReadiness.batteryOptimizationDisabled(context) && signedIn
+        ready = DeviceReadiness.accessibilityEnabled(context) && signedIn
         val current = nav.currentDestination?.route
         if (ready && current == Route.PERMISSIONS) nav.navigate(Route.HOME) {
             popUpTo(Route.PERMISSIONS) { inclusive = true }
@@ -44,18 +47,20 @@ fun DoomlyNav(resumeCount: Int = 0) {
         }
     }
 
-    val start = if (DeviceReadiness.accessibilityEnabled(context) &&
-        DeviceReadiness.batteryOptimizationDisabled(context) && signedIn
-    ) Route.HOME else Route.PERMISSIONS
+    val start = if (DeviceReadiness.accessibilityEnabled(context) && signedIn) Route.HOME else Route.PERMISSIONS
 
     Scaffold(
-        containerColor = Paper,
+        containerColor = Void,
         bottomBar = {
-            if (ready && route != Route.PERMISSIONS) NavigationBar(containerColor = Color.White, tonalElevation = 0.dp) {
+            if (ready && route != Route.PERMISSIONS) NavigationBar(
+                modifier = Modifier.drawBehind { drawLine(Hairline, start = androidx.compose.ui.geometry.Offset.Zero, end = androidx.compose.ui.geometry.Offset(size.width, 0f)) },
+                containerColor = Void,
+                tonalElevation = 0.dp
+            ) {
                 listOf(
-                    Triple(Route.HOME, Icons.Rounded.Face, "Today"),
-                    Triple(Route.BOARD, Icons.Rounded.BarChart, "Insights"),
-                    Triple(Route.PROFILE, Icons.Rounded.Person, "Me")
+                    Triple(Route.HOME, Icons.Rounded.GridView, "Dashboard"),
+                    Triple(Route.BOARD, Icons.Rounded.EmojiEvents, "League"),
+                    Triple(Route.PROFILE, Icons.Rounded.Person, "Profile")
                 ).forEach { (destination, icon, label) ->
                     NavigationBarItem(
                         selected = route == destination,
@@ -65,7 +70,7 @@ fun DoomlyNav(resumeCount: Int = 0) {
                         } },
                         icon = { Icon(icon, label) }, label = { Text(label) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Ink, selectedTextColor = Ink, indicatorColor = Sunshine,
+                            selectedIconColor = Frost, selectedTextColor = Frost, indicatorColor = Panel,
                             unselectedIconColor = Muted, unselectedTextColor = Muted
                         )
                     )

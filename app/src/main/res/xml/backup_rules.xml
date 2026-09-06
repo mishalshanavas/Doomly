@@ -9,4 +9,6 @@
     <!-- Keystore keys do not transfer with backups, so encrypted sessions must not either. -->
     <exclude domain="sharedpref" path="doomly_auth_secure.xml"/>
     <exclude domain="sharedpref" path="doomly_auth.xml"/>
+    <exclude domain="sharedpref" path="doomly_detector.xml"/>
+    <exclude domain="external" path="logs/"/>
 </full-backup-content>

@@ -22,8 +22,6 @@ public final class DoomStatsStore {
     private static final String KEY_LAST_ACTIVE_DAY = "last_active_day";
     private static final String KEY_DAILY_TARGET = "daily_target";
     private static final String KEY_DISPLAY_NAME = "display_name";
-    private static final String KEY_DEBUG_LINE = "debug_line";
-    private static final String KEY_DEBUG_UPDATED_AT = "debug_updated_at";
     private static final String KEY_DAILY_HISTORY = "daily_history";
     private static final int MAX_HISTORY_DAYS = 30;
     private static final DateTimeFormatter DAY_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
@@ -50,14 +48,6 @@ public final class DoomStatsStore {
                 todayLikes,
                 dailyTarget,
                 displayName == null ? "" : displayName
-        );
-    }
-
-    public static DebugSnapshot debugSnapshot(Context context) {
-        SharedPreferences prefs = prefs(context);
-        return new DebugSnapshot(
-                prefs.getString(KEY_DEBUG_LINE, "No Instagram signals yet."),
-                prefs.getLong(KEY_DEBUG_UPDATED_AT, 0L)
         );
     }
 
@@ -108,13 +98,6 @@ public final class DoomStatsStore {
         }
         prefs(context).edit().putString(KEY_DISPLAY_NAME, safeName).apply();
         return snapshot(context);
-    }
-
-    public static void recordDebug(Context context, String line) {
-        prefs(context).edit()
-                .putString(KEY_DEBUG_LINE, line)
-                .putLong(KEY_DEBUG_UPDATED_AT, System.currentTimeMillis())
-                .apply();
     }
 
     /** Get daily history: Map of "2026-06-09" → reelCount. */
@@ -242,13 +225,4 @@ public final class DoomStatsStore {
         }
     }
 
-    public static final class DebugSnapshot {
-        public final String line;
-        public final long updatedAtMs;
-
-        public DebugSnapshot(String line, long updatedAtMs) {
-            this.line = line;
-            this.updatedAtMs = updatedAtMs;
-        }
-    }
 }

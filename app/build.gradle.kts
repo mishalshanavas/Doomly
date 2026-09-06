@@ -4,6 +4,27 @@ plugins {
 }
 
 val googleServicesJson = file("google-services.json")
+fun releaseSecret(name: String): String? = providers.gradleProperty(name)
+    .orElse(providers.environmentVariable(name))
+    .orNull
+
+val releaseStoreFile = releaseSecret("DOOMLY_UPLOAD_STORE_FILE")
+val releaseStorePassword = releaseSecret("DOOMLY_UPLOAD_STORE_PASSWORD")
+val releaseKeyAlias = releaseSecret("DOOMLY_UPLOAD_KEY_ALIAS")
+val releaseKeyPassword = releaseSecret("DOOMLY_UPLOAD_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { !it.isNullOrBlank() }
+
+if (listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).any { !it.isNullOrBlank() } &&
+    !hasReleaseSigning
+) {
+    throw GradleException("Release signing is only partially configured. Set all DOOMLY_UPLOAD_* values.")
+}
+
 if (
     googleServicesJson.exists() &&
     googleServicesJson.readText().contains("\"package_name\": \"com.doomly.app\"")
@@ -23,16 +44,28 @@ android {
         applicationId = "com.doomly.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = releaseSecret("DOOMLY_VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = releaseSecret("DOOMLY_VERSION_NAME") ?: "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("upload") {
+                storeFile = file(requireNotNull(releaseStoreFile))
+                storePassword = requireNotNull(releaseStorePassword)
+                keyAlias = requireNotNull(releaseKeyAlias)
+                keyPassword = requireNotNull(releaseKeyPassword)
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("upload")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
