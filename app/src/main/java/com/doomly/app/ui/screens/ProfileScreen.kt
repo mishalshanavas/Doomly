@@ -33,6 +33,7 @@ import com.doomly.app.ProfileViewModel
 import com.doomly.app.data.AuthRepository
 import com.doomly.app.ui.components.PageHeader
 import com.doomly.app.ui.components.PremiumCard
+import com.doomly.app.ui.components.DailyUsageHeatmap
 import com.doomly.app.ui.theme.*
 import com.doomly.app.update.GitHubUpdateManager
 import com.doomly.app.update.UpdateState
@@ -64,6 +65,9 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
     }
     DisposableEffect(updateManager) { onDispose(updateManager::cancel) }
     val best = DoomStatsStore.dailyHistory(context).values.maxOrNull() ?: 0
+    val usageHistory = DoomStatsStore.dailyHistory(context).toMutableMap().apply {
+        put(java.time.LocalDate.now().toString(), DoomStatsStore.snapshot(context).todayReels)
+    }
 
     if (confirmSignOut) AlertDialog(
         onDismissRequest = { confirmSignOut = false },
@@ -113,6 +117,11 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
             ProfileStat(streak, "DAY STREAK", Modifier.weight(1f))
             ProfileStat(target.toString(), "DAILY GOAL", Modifier.weight(1f))
             ProfileStat(best.toString(), "BEST DAY", Modifier.weight(1f))
+        }
+
+        Spacer(Modifier.height(18.dp))
+        PremiumCard(Modifier.fillMaxWidth()) {
+            DailyUsageHeatmap(usageHistory, Modifier.fillMaxWidth())
         }
 
         if (BuildConfig.ENABLE_GITHUB_UPDATES) {
