@@ -44,17 +44,18 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
     var authError by remember { mutableStateOf<String?>(null) }
     var showAccessibilityDisclosure by remember { mutableStateOf(false) }
     var notificationGranted by remember { mutableStateOf(notificationsEnabled(context)) }
+    val accessibilityReady = remember(resumeCount) { DeviceReadiness.accessibilityEnabled(context) }
     val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         notificationGranted = it
+        if (it && accessibilityReady && signedIn) onDone()
     }
 
-    val accessibilityReady = remember(resumeCount) { DeviceReadiness.accessibilityEnabled(context) }
-    val completed = listOf(accessibilityReady, signedIn).count { it }
+    val completed = listOf(accessibilityReady, signedIn, notificationGranted).count { it }
 
     LaunchedEffect(resumeCount) {
         signedIn = AuthRepository.getInstance().isSignedIn(context)
         notificationGranted = notificationsEnabled(context)
-        if (accessibilityReady && signedIn) onDone()
+        if (accessibilityReady && signedIn && notificationGranted) onDone()
     }
 
     fun continueSetup() {
@@ -65,11 +66,13 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
                     override fun onSuccess(value: Void?) {
                         signedIn = true
                         authError = null
-                        if (accessibilityReady) onDone()
+                        if (accessibilityReady && notificationGranted) onDone()
                     }
                     override fun onError(message: String) { authError = message }
                 })
             }
+            !notificationGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
+                notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             else -> onDone()
         }
     }
@@ -82,22 +85,24 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
         Text("Doomly", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(3.dp))
         Text("Reel tracking, with suspiciously good posture.", style = MaterialTheme.typography.bodySmall, color = Muted, textAlign = TextAlign.Center)
-        DottedOrbit(completed / 2f, Modifier.fillMaxWidth().height(170.dp), "Setup progress")
+        DottedOrbit(completed / 3f, Modifier.fillMaxWidth().height(170.dp), "Setup progress")
 
-        Text("Make Doomly yours", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+        Text("Three quick essentials", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         Spacer(Modifier.height(5.dp))
         Text("These are optional. You can start now and turn them on whenever you’re ready.", style = MaterialTheme.typography.bodyMedium, color = Muted, textAlign = TextAlign.Center)
         Spacer(Modifier.height(20.dp))
 
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-            Text("OPTIONAL SETUP", style = MaterialTheme.typography.labelSmall, color = Muted)
-            Text("$completed OF 2", style = MaterialTheme.typography.labelSmall, color = Muted)
+            Text("REQUIRED SETUP", style = MaterialTheme.typography.labelSmall, color = Muted)
+            Text("$completed OF 3", style = MaterialTheme.typography.labelSmall, color = Muted)
         }
         Spacer(Modifier.height(8.dp))
         Column(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(14.dp)).padding(horizontal = 15.dp)) {
             SetupRow(Icons.Rounded.Visibility, "Recognize Reels", "Reads visible Instagram UI locally to identify Reels.", accessibilityReady)
             HorizontalDivider(color = Hairline)
             SetupRow(Icons.Rounded.PersonOutline, "Save your score", "Sign in for cloud sync and the daily league.", signedIn)
+            HorizontalDivider(color = Hairline)
+            SetupRow(Icons.Rounded.NotificationsNone, "Stay informed", "Receive important Doomly updates and milestones.", notificationGranted)
         }
 
         authError?.let {
@@ -116,10 +121,6 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
             Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, modifier = Modifier.size(18.dp))
         }
 
-        TextButton(onClick = onDone, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            Text("Skip for now", color = Muted)
-        }
-
         Spacer(Modifier.height(12.dp))
         OutlinedButton(
             onClick = {
@@ -133,10 +134,10 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
         ) {
             Icon(Icons.Rounded.NotificationsNone, null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text(if (notificationGranted) "Gentle reminders enabled" else "Enable reminders (optional)")
+            Text(if (notificationGranted) "Notifications enabled" else "Enable notifications")
         }
         Spacer(Modifier.height(8.dp))
-        Text("You can change every permission later in Android Settings.", style = MaterialTheme.typography.labelSmall, color = Muted, textAlign = TextAlign.Center)
+        Text("You can review these permissions later in Android Settings.", style = MaterialTheme.typography.labelSmall, color = Muted, textAlign = TextAlign.Center)
         Spacer(Modifier.height(28.dp))
     }
 
@@ -183,8 +184,8 @@ private fun SetupRow(icon: ImageVector, title: String, body: String, done: Boole
 
 private fun nextLabel(accessibility: Boolean, signedIn: Boolean) = when {
     !accessibility -> "Allow Reel recognition"
-    !signedIn -> "Sign in and finish"
-    else -> "Open dashboard"
+    !signedIn -> "Sign in to continue"
+    else -> "Allow notifications"
 }
 
 private fun notificationsEnabled(context: Context) =
