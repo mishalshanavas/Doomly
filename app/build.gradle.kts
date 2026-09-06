@@ -34,6 +34,7 @@ if (
 
 android {
     namespace = "com.doomly.app"
+    flavorDimensions += "distribution"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -44,8 +45,8 @@ android {
         applicationId = "com.doomly.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = releaseSecret("DOOMLY_VERSION_CODE")?.toIntOrNull() ?: 1
-        versionName = releaseSecret("DOOMLY_VERSION_NAME") ?: "1.0"
+        versionCode = releaseSecret("DOOMLY_VERSION_CODE")?.toIntOrNull() ?: 1_000_000
+        versionName = releaseSecret("DOOMLY_VERSION_NAME") ?: "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -58,6 +59,17 @@ android {
                 keyAlias = requireNotNull(releaseKeyAlias)
                 keyPassword = requireNotNull(releaseKeyPassword)
             }
+        }
+    }
+
+    productFlavors {
+        create("github") {
+            dimension = "distribution"
+            buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "true")
+        }
+        create("play") {
+            dimension = "distribution"
+            buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
         }
     }
 
@@ -81,6 +93,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

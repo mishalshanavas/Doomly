@@ -1,7 +1,8 @@
 # Doomly Android releases
 
-The `Android Release` workflow builds a signed, minified APK and Android App
-Bundle. Configure these repository Actions secrets before running it:
+The `Android Release` workflow builds a signed, minified GitHub APK with the
+self-updater and a Play-safe Android App Bundle without sideload permissions.
+Configure these repository Actions secrets before running it:
 
 - `ANDROID_KEYSTORE_BASE64`: the upload keystore encoded as one Base64 string
 - `ANDROID_KEYSTORE_PASSWORD`: upload keystore password

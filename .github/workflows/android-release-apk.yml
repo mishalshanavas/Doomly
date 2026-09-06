@@ -119,14 +119,14 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Test and build release
-        run: ./gradlew --no-daemon testDebugUnitTest lintRelease assembleRelease bundleRelease
+        run: ./gradlew --no-daemon testGithubDebugUnitTest lintGithubRelease lintPlayRelease assembleGithubRelease bundlePlayRelease
 
       - name: Verify and stage artifacts
         shell: bash
         run: |
           set -euo pipefail
-          apk="app/build/outputs/apk/release/app-release.apk"
-          aab="app/build/outputs/bundle/release/app-release.aab"
+          apk="app/build/outputs/apk/github/release/app-github-release.apk"
+          aab="app/build/outputs/bundle/playRelease/app-play-release.aab"
           test -s "$apk"
           test -s "$aab"
           apksigner_path="$(find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
