@@ -77,7 +77,11 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel()) {
         PageHeader(title = "Dashboard")
         Spacer(Modifier.height(12.dp))
 
-        DottedOrbit(animatedProgress, Modifier.fillMaxWidth().height(190.dp))
+        DottedOrbit(
+            progress = animatedProgress,
+            modifier = Modifier.fillMaxWidth().height(190.dp),
+            mascotScale = .42f
+        )
 
         Text("$percent%", style = MaterialTheme.typography.displayMedium, color = Frost)
         Text("$animatedReels / $target", style = MaterialTheme.typography.bodySmall, color = Muted)

@@ -1,5 +1,13 @@
 package com.doomly.app.ui.components
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -9,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,8 +73,42 @@ fun SectionLabel(text: String, action: String? = null) {
 
 /** The dotted orbit surrounds Doomly's pixel-eyed mascot from the launcher icon. */
 @Composable
-fun DottedOrbit(progress: Float, modifier: Modifier = Modifier, label: String = "Daily progress") {
+fun DottedOrbit(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    label: String = "Daily progress",
+    mascotScale: Float = .29f
+) {
     val p = progress.coerceIn(0f, 1f)
+    val motion = rememberInfiniteTransition(label = "Doomly mascot motion")
+    val orbitPhase by motion.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * PI).toFloat(),
+        animationSpec = infiniteRepeatable(tween(18_000, easing = LinearEasing)),
+        label = "Orbit rotation"
+    )
+    val breath by motion.animateFloat(
+        initialValue = .98f,
+        targetValue = 1.03f,
+        animationSpec = infiniteRepeatable(
+            tween(1_800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "Mascot breathing"
+    )
+    val eyeOpen by motion.animateFloat(
+        initialValue = 1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(keyframes {
+            durationMillis = 4_200
+            1f at 0
+            1f at 3_550
+            .12f at 3_650
+            1f at 3_780
+            1f at 4_200
+        }),
+        label = "Mascot blink"
+    )
     Canvas(modifier.semantics { contentDescription = "$label, ${(p * 100).toInt()} percent" }) {
         val center = Offset(size.width / 2f, size.height / 2f)
         val rings = 5
@@ -73,7 +116,8 @@ fun DottedOrbit(progress: Float, modifier: Modifier = Modifier, label: String = 
             val count = 14 + ring * 8
             val radius = size.minDimension * (.16f + ring * .075f)
             repeat(count) { index ->
-                val angle = -PI / 2 + 2 * PI * index / count
+                val direction = if (ring % 2 == 0) 1f else -.72f
+                val angle = -PI / 2 + 2 * PI * index / count + orbitPhase * direction
                 val normalized = (ring + index.toFloat() / count) / rings
                 val active = normalized <= p
                 drawCircle(
@@ -86,7 +130,7 @@ fun DottedOrbit(progress: Float, modifier: Modifier = Modifier, label: String = 
                 )
             }
         }
-        drawPixelDoomly(center, size.minDimension * .29f)
+        drawPixelDoomly(center, size.minDimension * mascotScale * breath, eyeOpen)
     }
 }
 
@@ -98,7 +142,7 @@ fun DoomAvatar(@Suppress("UNUSED_PARAMETER") progress: Float, modifier: Modifier
 }
 
 /** Draws the icon character as a crisp 17×17 pixel matrix at any Compose size. */
-private fun DrawScope.drawPixelDoomly(center: Offset, diameter: Float) {
+private fun DrawScope.drawPixelDoomly(center: Offset, diameter: Float, eyeOpen: Float = 1f) {
     val gridSize = 17
     val cell = diameter / gridSize
     val pixelSize = cell * .72f
@@ -113,26 +157,44 @@ private fun DrawScope.drawPixelDoomly(center: Offset, diameter: Float) {
             val y = center.y + (row - (gridSize - 1) / 2f) * cell
             val insideFace = (x - center.x) * (x - center.x) +
                 (y - center.y) * (y - center.y) <= (radius - cell * .55f) * (radius - cell * .55f)
-            if (!insideFace) return@repeat
+            if (insideFace) {
+                drawRect(
+                    color = PanelRaised.copy(alpha = .72f),
+                    topLeft = Offset(x - pixelSize / 2f, y - pixelSize / 2f),
+                    size = Size(pixelSize, pixelSize)
+                )
+            }
+        }
+    }
 
-            val leftEye = isEyePixel(column, row, centerColumn = 4.5f)
-            val rightEye = isEyePixel(column, row, centerColumn = 11.5f)
-            drawRect(
-                color = if (leftEye || rightEye) Frost else PanelRaised.copy(alpha = .72f),
-                topLeft = Offset(x - pixelSize / 2f, y - pixelSize / 2f),
-                size = Size(pixelSize, pixelSize)
-            )
+    val open = eyeOpen.coerceIn(.12f, 1f)
+    listOf(3, 10).forEach { startColumn ->
+        EYE_PIXELS.forEachIndexed { row, pattern ->
+            pattern.forEachIndexed { column, pixel ->
+                if (pixel != '#') return@forEachIndexed
+                val x = center.x + (startColumn + column - (gridSize - 1) / 2f) * cell
+                val y = center.y + (row + 4 - (gridSize - 1) / 2f) * cell * open
+                drawRect(
+                    color = Frost,
+                    topLeft = Offset(x - pixelSize / 2f, y - pixelSize * open / 2f),
+                    size = Size(pixelSize, pixelSize * open)
+                )
+            }
         }
     }
 }
 
-private fun isEyePixel(column: Int, row: Int, centerColumn: Float): Boolean {
-    val dx = kotlin.math.abs(column - centerColumn)
-    val dy = kotlin.math.abs(row - 8)
-    val outerEye = dx <= 2f && dy <= 4 && !(dx > 1f && dy == 4)
-    val hollowCenter = dx < 1f && dy <= 2
-    return outerEye && !hollowCenter
-}
+private val EYE_PIXELS = listOf(
+    ".##.",
+    "####",
+    "#..#",
+    "#..#",
+    "#..#",
+    "#..#",
+    "#..#",
+    "####",
+    ".##."
+)
 
 @Composable
 fun StatusPill(text: String) {

@@ -21,7 +21,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: android-release-${{ github.ref }}
+  group: android-release-publishing
   cancel-in-progress: false
 
 jobs:
@@ -52,6 +52,7 @@ jobs:
       - name: Resolve release version
         shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           INPUT_VERSION_NAME: ${{ inputs.version_name }}
           INPUT_VERSION_CODE: ${{ inputs.version_code }}
         run: |
@@ -70,13 +71,32 @@ jobs:
               exit 1
             fi
             version_code=$((major * 1000000 + minor * 1000 + patch))
+            release_tag="$GITHUB_REF_NAME"
           elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             version_name="$INPUT_VERSION_NAME"
             version_code="$INPUT_VERSION_CODE"
+            release_tag="v$version_name"
           else
-            # Branch builds are downloadable CI snapshots, not public releases.
-            version_name="0.0.0-dev.${GITHUB_RUN_NUMBER}"
-            version_code="$GITHUB_RUN_NUMBER"
+            latest_tag="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq '.tag_name')"
+            latest_version="${latest_tag#v}"
+            if [[ ! "$latest_version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              echo "Latest release tag must be a stable semantic version, found: $latest_tag" >&2
+              exit 1
+            fi
+            major=$((10#${BASH_REMATCH[1]}))
+            minor=$((10#${BASH_REMATCH[2]}))
+            patch=$((10#${BASH_REMATCH[3]} + 1))
+            if (( patch > 999 )); then
+              patch=0
+              minor=$((minor + 1))
+            fi
+            if (( minor > 999 )); then
+              minor=0
+              major=$((major + 1))
+            fi
+            version_name="$major.$minor.$patch"
+            version_code=$((major * 1000000 + minor * 1000 + patch))
+            release_tag="v$version_name"
           fi
 
           if [[ ! "$version_name" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
@@ -91,6 +111,7 @@ jobs:
           echo "DOOMLY_VERSION_NAME=$version_name" >> "$GITHUB_ENV"
           echo "DOOMLY_VERSION_CODE=$version_code" >> "$GITHUB_ENV"
           echo "RELEASE_BASENAME=Doomly-$version_name" >> "$GITHUB_ENV"
+          echo "RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
 
       - name: Restore Firebase config
         shell: bash
@@ -153,9 +174,11 @@ jobs:
           retention-days: 30
 
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/master'
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          target_commitish: ${{ github.sha }}
           name: Doomly ${{ env.DOOMLY_VERSION_NAME }}
           generate_release_notes: true
           files: release-artifacts/*
