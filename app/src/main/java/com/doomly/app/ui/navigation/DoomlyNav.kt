@@ -30,15 +30,18 @@ fun DoomlyNav(resumeCount: Int = 0) {
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
     var signedIn by remember { mutableStateOf(AuthRepository.getInstance().isSignedIn(context)) }
+    val setupPrefs = remember(context) { context.getSharedPreferences("doomly_ui", android.content.Context.MODE_PRIVATE) }
+    var setupDismissed by remember { mutableStateOf(setupPrefs.getBoolean("setup_dismissed", false)) }
     var ready by remember {
         mutableStateOf(
-            DeviceReadiness.accessibilityEnabled(context) && signedIn
+            setupPrefs.getBoolean("setup_dismissed", false) ||
+                (DeviceReadiness.accessibilityEnabled(context) && signedIn)
         )
     }
 
     LaunchedEffect(resumeCount, signedIn) {
         signedIn = AuthRepository.getInstance().isSignedIn(context)
-        ready = DeviceReadiness.accessibilityEnabled(context) && signedIn
+        ready = setupDismissed || (DeviceReadiness.accessibilityEnabled(context) && signedIn)
         val current = nav.currentDestination?.route
         if (ready && current == Route.PERMISSIONS) nav.navigate(Route.HOME) {
             popUpTo(Route.PERMISSIONS) { inclusive = true }
@@ -47,7 +50,7 @@ fun DoomlyNav(resumeCount: Int = 0) {
         }
     }
 
-    val start = if (DeviceReadiness.accessibilityEnabled(context) && signedIn) Route.HOME else Route.PERMISSIONS
+    val start = if (setupDismissed || (DeviceReadiness.accessibilityEnabled(context) && signedIn)) Route.HOME else Route.PERMISSIONS
     val navigationDivider = Hairline
 
     Scaffold(
@@ -82,7 +85,13 @@ fun DoomlyNav(resumeCount: Int = 0) {
         NavHost(nav, start, Modifier.padding(padding)) {
             composable(Route.HOME) { HomeScreen() }
             composable(Route.BOARD) { LeaderboardScreen() }
-            composable(Route.PERMISSIONS) { PermissionsScreen(resumeCount, onDone = { signedIn = true }) }
+            composable(Route.PERMISSIONS) {
+                PermissionsScreen(resumeCount, onDone = {
+                    setupPrefs.edit().putBoolean("setup_dismissed", true).apply()
+                    setupDismissed = true
+                    ready = true
+                })
+            }
             composable(Route.PROFILE) { ProfileScreen(onSignOut = { signedIn = false }) }
         }
     }

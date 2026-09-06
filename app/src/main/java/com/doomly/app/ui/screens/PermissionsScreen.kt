@@ -84,13 +84,13 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
         Text("Reel tracking, with suspiciously good posture.", style = MaterialTheme.typography.bodySmall, color = Muted, textAlign = TextAlign.Center)
         DottedOrbit(completed / 2f, Modifier.fillMaxWidth().height(170.dp), "Setup progress")
 
-        Text("A tiny setup before the big scroll", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+        Text("Make Doomly yours", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         Spacer(Modifier.height(5.dp))
-        Text("Doomly needs two essentials to count reliably and sync your progress.", style = MaterialTheme.typography.bodyMedium, color = Muted, textAlign = TextAlign.Center)
+        Text("These are optional. You can start now and turn them on whenever you’re ready.", style = MaterialTheme.typography.bodyMedium, color = Muted, textAlign = TextAlign.Center)
         Spacer(Modifier.height(20.dp))
 
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-            Text("SETUP", style = MaterialTheme.typography.labelSmall, color = Muted)
+            Text("OPTIONAL SETUP", style = MaterialTheme.typography.labelSmall, color = Muted)
             Text("$completed OF 2", style = MaterialTheme.typography.labelSmall, color = Muted)
         }
         Spacer(Modifier.height(8.dp))
@@ -114,6 +114,10 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
             Text(nextLabel(accessibilityReady, signedIn))
             Spacer(Modifier.width(8.dp))
             Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, modifier = Modifier.size(18.dp))
+        }
+
+        TextButton(onClick = onDone, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+            Text("Skip for now", color = Muted)
         }
 
         Spacer(Modifier.height(12.dp))
