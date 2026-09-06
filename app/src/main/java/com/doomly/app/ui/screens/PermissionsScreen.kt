@@ -89,7 +89,7 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
 
         Text("Three quick essentials", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         Spacer(Modifier.height(5.dp))
-        Text("These are optional. You can start now and turn them on whenever you’re ready.", style = MaterialTheme.typography.bodyMedium, color = Muted, textAlign = TextAlign.Center)
+        Text("Complete these before entering Doomly. Each step explains what it enables.", style = MaterialTheme.typography.bodyMedium, color = Muted, textAlign = TextAlign.Center)
         Spacer(Modifier.height(20.dp))
 
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
