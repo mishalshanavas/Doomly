@@ -57,6 +57,11 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         if (BuildConfig.ENABLE_GITHUB_UPDATES) updateManager.check { updateState = it }
     }
 
+    LaunchedEffect(updateState) {
+        val ready = updateState as? UpdateState.ReadyToInstall ?: return@LaunchedEffect
+        context.findActivity()?.let { updateManager.install(it, ready) }
+    }
+
     DisposableEffect(owner) {
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh() }
         owner.lifecycle.addObserver(observer)
