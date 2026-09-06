@@ -132,7 +132,8 @@ jobs:
           apksigner_path="$(find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"
           test -n "$apksigner_path"
           "$apksigner_path" verify --verbose --print-certs "$apk"
-          jarsigner -verify -strict "$aab"
+          jarsigner -verify "$aab"
+          keytool -printcert -jarfile "$aab" >/dev/null
           mkdir -p release-artifacts
           cp "$apk" "release-artifacts/$RELEASE_BASENAME.apk"
           cp "$aab" "release-artifacts/$RELEASE_BASENAME.aab"

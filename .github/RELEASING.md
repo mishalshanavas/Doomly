@@ -9,6 +9,20 @@ Bundle. Configure these repository Actions secrets before running it:
 - `ANDROID_KEY_PASSWORD`: upload key password
 - `GOOGLE_SERVICES_JSON`: optional replacement for `app/google-services.json`
 
+The Doomly upload key generated for this project is stored locally at
+`C:\Users\mishal\.android\doomly-upload.jks`. Its credential backup is encrypted
+to the current Windows account with DPAPI at
+`C:\Users\mishal\.android\doomly-upload-credential.clixml`. Back up both files
+securely; losing the upload key can prevent future updates.
+
+To recover the alias and password on this Windows account:
+
+```powershell
+$credential = Import-Clixml "C:\Users\mishal\.android\doomly-upload-credential.clixml"
+$credential.UserName
+$credential.GetNetworkCredential().Password
+```
+
 On PowerShell, encode an existing upload keystore without modifying it:
 
 ```powershell
