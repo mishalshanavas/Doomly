@@ -8,9 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Edit
@@ -73,26 +71,16 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel()) {
     )
 
     Column(
-        Modifier.fillMaxSize().background(Void).verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp)
+        Modifier.fillMaxSize().background(Void).padding(horizontal = 24.dp)
     ) {
         Spacer(Modifier.height(26.dp))
-        PageHeader(
-            title = "Dashboard",
-            subtitle = "Welcome back. Your thumb has been busy.",
-            trailing = { StatusPill("TRACKING") }
-        )
+        PageHeader(title = "Dashboard")
         Spacer(Modifier.height(12.dp))
 
         DottedOrbit(animatedProgress, Modifier.fillMaxWidth().height(190.dp))
 
         Text("$percent%", style = MaterialTheme.typography.displayMedium, color = Frost)
-        Text(
-            if (progress >= 1f) "of today’s goal — completed. The algorithm salutes you."
-            else "of today’s goal — $animatedReels of $target Reels counted.",
-            style = MaterialTheme.typography.bodySmall,
-            color = Muted
-        )
+        Text("$animatedReels / $target", style = MaterialTheme.typography.bodySmall, color = Muted)
         Spacer(Modifier.height(18.dp))
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -112,7 +100,6 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel()) {
                     Text("DAILY LIMIT", style = MaterialTheme.typography.labelSmall, color = Muted)
                     Spacer(Modifier.height(6.dp))
                     Text("$target Reels", style = MaterialTheme.typography.titleMedium)
-                    Text("Tap to edit your definition of ‘just one more.’", style = MaterialTheme.typography.bodySmall, color = Muted)
                 }
                 Icon(Icons.Rounded.Edit, "Edit daily goal", tint = Frost, modifier = Modifier.size(19.dp))
             }

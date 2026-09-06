@@ -13,7 +13,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -37,12 +38,14 @@ fun PremiumCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.
 }
 
 @Composable
-fun PageHeader(title: String, subtitle: String, trailing: (@Composable () -> Unit)? = null) {
+fun PageHeader(title: String, subtitle: String? = null, trailing: (@Composable () -> Unit)? = null) {
     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) {
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.headlineMedium, color = Frost)
-            Spacer(Modifier.height(2.dp))
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Muted)
+            subtitle?.let {
+                Spacer(Modifier.height(2.dp))
+                Text(it, style = MaterialTheme.typography.bodySmall, color = Muted)
+            }
         }
         trailing?.let {
             Spacer(Modifier.width(12.dp))
@@ -59,7 +62,7 @@ fun SectionLabel(text: String, action: String? = null) {
     }
 }
 
-/** The dotted orbit is Doomly's signature progress mark: data first, smile second. */
+/** The dotted orbit surrounds Doomly's pixel-eyed mascot from the launcher icon. */
 @Composable
 fun DottedOrbit(progress: Float, modifier: Modifier = Modifier, label: String = "Daily progress") {
     val p = progress.coerceIn(0f, 1f)
@@ -83,31 +86,52 @@ fun DottedOrbit(progress: Float, modifier: Modifier = Modifier, label: String = 
                 )
             }
         }
-        drawCircle(Frost, size.minDimension * .105f, center)
-        val leftEye = Offset(center.x - size.minDimension * .035f, center.y - size.minDimension * .018f)
-        val rightEye = Offset(center.x + size.minDimension * .035f, center.y - size.minDimension * .018f)
-        drawCircle(Void, size.minDimension * .009f, leftEye)
-        drawCircle(Void, size.minDimension * .009f, rightEye)
-        val smile = Path().apply {
-            moveTo(center.x - size.minDimension * .038f, center.y + size.minDimension * .018f)
-            quadraticTo(center.x, center.y + size.minDimension * .05f, center.x + size.minDimension * .038f, center.y + size.minDimension * .018f)
-        }
-        drawPath(smile, Void, style = Stroke(size.minDimension * .009f))
+        drawPixelDoomly(center, size.minDimension * .29f)
     }
 }
 
 @Composable
-fun DoomAvatar(progress: Float, modifier: Modifier = Modifier) {
+fun DoomAvatar(@Suppress("UNUSED_PARAMETER") progress: Float, modifier: Modifier = Modifier) {
     Canvas(modifier.semantics { contentDescription = "Doomly mascot" }) {
-        drawCircle(Frost, size.minDimension / 2f)
-        val eyeY = size.height * .42f
-        listOf(.37f, .63f).forEach { x -> drawCircle(Void, size.minDimension * .045f, Offset(size.width * x, eyeY)) }
-        val mouth = Path().apply {
-            moveTo(size.width * .32f, size.height * .62f)
-            quadraticTo(size.width * .5f, size.height * (.72f + progress.coerceIn(0f, 1f) * .05f), size.width * .68f, size.height * .62f)
-        }
-        drawPath(mouth, Void, style = Stroke(size.minDimension * .045f))
+        drawPixelDoomly(Offset(size.width / 2f, size.height / 2f), size.minDimension)
     }
+}
+
+/** Draws the icon character as a crisp 17×17 pixel matrix at any Compose size. */
+private fun DrawScope.drawPixelDoomly(center: Offset, diameter: Float) {
+    val gridSize = 17
+    val cell = diameter / gridSize
+    val pixelSize = cell * .72f
+    val radius = diameter / 2f
+
+    drawCircle(Void, radius, center)
+    drawCircle(Hairline.copy(alpha = .8f), radius, center, style = Stroke(cell * .28f))
+
+    repeat(gridSize) { row ->
+        repeat(gridSize) { column ->
+            val x = center.x + (column - (gridSize - 1) / 2f) * cell
+            val y = center.y + (row - (gridSize - 1) / 2f) * cell
+            val insideFace = (x - center.x) * (x - center.x) +
+                (y - center.y) * (y - center.y) <= (radius - cell * .55f) * (radius - cell * .55f)
+            if (!insideFace) return@repeat
+
+            val leftEye = isEyePixel(column, row, centerColumn = 4.5f)
+            val rightEye = isEyePixel(column, row, centerColumn = 11.5f)
+            drawRect(
+                color = if (leftEye || rightEye) Frost else PanelRaised.copy(alpha = .72f),
+                topLeft = Offset(x - pixelSize / 2f, y - pixelSize / 2f),
+                size = Size(pixelSize, pixelSize)
+            )
+        }
+    }
+}
+
+private fun isEyePixel(column: Int, row: Int, centerColumn: Float): Boolean {
+    val dx = kotlin.math.abs(column - centerColumn)
+    val dy = kotlin.math.abs(row - 8)
+    val outerEye = dx <= 2f && dy <= 4 && !(dx > 1f && dy == 4)
+    val hollowCenter = dx < 1f && dy <= 2
+    return outerEye && !hollowCenter
 }
 
 @Composable
