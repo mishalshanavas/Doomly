@@ -8,6 +8,7 @@ import java.io.File;
 
 import com.doomly.app.data.SupabaseClient;
 import com.doomly.app.data.SupabaseConfig;
+import com.doomly.app.data.PushTokenRegistrar;
 
 public class DoomlyApp extends Application {
 
@@ -20,6 +21,8 @@ public class DoomlyApp extends Application {
 
         DoomStatsStore.snapshot(this);
         DoomlyNotifications.createChannel(this);
+        DoomlyMessagingService.ensureChannel(this);
+        PushTokenRegistrar.register(this);
         removeLegacyDiagnostics();
     }
 

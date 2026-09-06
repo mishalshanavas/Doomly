@@ -183,6 +183,7 @@ public final class AuthRepository {
                     SecureAuthStore.put(activity, KEY_NAME, name);
                     SecureAuthStore.put(activity, KEY_TOKEN, token);
                     SecureAuthStore.put(activity, KEY_REFRESH, refresh != null ? refresh : "");
+                    PushTokenRegistrar.register(activity);
 
                     if (!name.isEmpty()) DoomStatsStore.setDisplayName(activity, name);
                     Log.d(TAG, "Google sign-in success");

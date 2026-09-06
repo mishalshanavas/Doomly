@@ -79,6 +79,20 @@ public final class SupabaseClient {
         get("/daily_history?uid=eq." + uid + "&order=date.desc&limit=30", new JAC() { public void onJson(JSONArray a) { cb.onSuccess(a); } public void onError(String m) { cb.onError(m); } });
     }
 
+    /** Register one FCM token for the signed-in Supabase user. */
+    public void registerDeviceToken(String uid, String token, ResultCallback<Void> cb) {
+        JSONObject body = new JSONObject();
+        try {
+            body.put("uid", uid);
+            body.put("token", token);
+            body.put("platform", "android");
+        } catch (Exception e) { cb.onError("build"); return; }
+        post("/device_tokens", body, new JC() {
+            public void onJson(JSONObject ignored) { cb.onSuccess(null); }
+            public void onError(String message) { cb.onError(message); }
+        });
+    }
+
     // ── HTTP ───────────────────────────────────────────────────────
 
     private String authHdr() { return "Bearer " + (accessToken != null ? accessToken : config.anonKey); }

@@ -1,0 +1,17 @@
+{
+  "project_info": {
+    "project_number": "41722825364",
+    "project_id": "doomly",
+    "storage_bucket": "doomly.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:41722825364:android:375e80d27fb57b40144281",
+        "android_client_info": { "package_name": "com.doomly.app" }
+      },
+      "api_key": [{ "current_key": "AIzaSyCwmwJdJhKhp6gizldc29kebWxVTSbQgac" }]
+    }
+  ],
+  "configuration_version": "1"
+}
