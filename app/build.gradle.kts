@@ -3,7 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-val googleServicesJson = file("google-services.json")
 fun releaseSecret(name: String): String? = providers.gradleProperty(name)
     .orElse(providers.environmentVariable(name))
     .orNull
@@ -23,13 +22,6 @@ if (listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPa
     !hasReleaseSigning
 ) {
     throw GradleException("Release signing is only partially configured. Set all DOOMLY_UPLOAD_* values.")
-}
-
-if (
-    googleServicesJson.exists() &&
-    googleServicesJson.readText().contains("\"package_name\": \"com.doomly.app\"")
-) {
-    apply(plugin = "com.google.gms.google-services")
 }
 
 android {
