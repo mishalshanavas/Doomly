@@ -1,11 +1,7 @@
 package com.doomly.app.ui.screens
 
 import android.Manifest
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -13,184 +9,70 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.NotificationsNone
-import androidx.compose.material.icons.rounded.PersonOutline
-import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import com.doomly.app.*
-import com.doomly.app.data.AuthRepository
-import com.doomly.app.ui.components.BoardArt
-import com.doomly.app.ui.components.TurnHeader
-import com.doomly.app.ui.components.PremiumCard
-import com.doomly.app.ui.components.StatusDot
+import com.doomly.app.ui.components.*
 import com.doomly.app.ui.theme.*
 
 @Composable
 fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
     val context = LocalContext.current
-    val activity = context.findActivity()
-    var signedIn by remember { mutableStateOf(AuthRepository.getInstance().isSignedIn(context)) }
-    var authError by remember { mutableStateOf<String?>(null) }
-    var showAccessibilityDisclosure by remember { mutableStateOf(false) }
-    var notificationGranted by remember { mutableStateOf(notificationsEnabled(context)) }
-    val accessibilityReady = remember(resumeCount) { DeviceReadiness.accessibilityEnabled(context) }
-    val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        notificationGranted = it
-        if (it && accessibilityReady && signedIn) onDone()
+    var step by rememberSaveable { mutableIntStateOf(0) }
+    var goal by rememberSaveable { mutableStateOf("") }
+    var disclosure by rememberSaveable { mutableStateOf(false) }
+    var denied by rememberSaveable { mutableStateOf(false) }
+    fun finish() { SetupPreferences.finish(context); onDone() }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) finish() else denied = true
     }
-
-    val completed = listOf(accessibilityReady, signedIn, notificationGranted).count { it }
-
-    LaunchedEffect(resumeCount) {
-        signedIn = AuthRepository.getInstance().isSignedIn(context)
-        notificationGranted = notificationsEnabled(context)
-        if (accessibilityReady && signedIn && notificationGranted) onDone()
+    LaunchedEffect(resumeCount, step) {
+        if (step == 1 && DeviceReadiness.accessibilityEnabled(context)) step = 2
+        if (step == 2 && androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()) finish()
     }
-
-    fun continueSetup() {
-        when {
-            !accessibilityReady -> showAccessibilityDisclosure = true
-            !signedIn -> (activity as? MainActivity)?.let { host ->
-                AuthRepository.getInstance().signIn(host, object : ResultCallback<Void> {
-                    override fun onSuccess(value: Void?) {
-                        signedIn = true
-                        authError = null
-                        if (accessibilityReady && notificationGranted) onDone()
-                    }
-                    override fun onError(message: String) { authError = message }
-                })
-            }
-            !notificationGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
-                notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            else -> onDone()
-        }
-    }
-
-    Column(
-        Modifier.fillMaxSize().background(Void).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(Modifier.height(26.dp))
+    Column(Modifier.fillMaxSize().background(Void).verticalScroll(rememberScrollState()).padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
         TurnHeader("Hello, player.")
-        Spacer(Modifier.height(3.dp))
-        Text("Welcome to Doomly. Make every scroll count.", style = MaterialTheme.typography.bodySmall, color = Muted, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(22.dp))
-        Row(Modifier.fillMaxWidth().height(112.dp), Arrangement.Center, Alignment.CenterVertically) {
-            BoardArt(com.doomly.app.R.drawable.board_flag, Modifier.weight(1f).size(64.dp))
-            Text("· · ·", color = Muted, modifier = Modifier.padding(horizontal = 6.dp))
-            BoardArt(com.doomly.app.R.drawable.board_pawn, Modifier.weight(1f).size(78.dp))
-            Text("· · ·", color = Muted, modifier = Modifier.padding(horizontal = 6.dp))
-            BoardArt(com.doomly.app.R.drawable.board_trophy, Modifier.weight(1f).size(64.dp))
-        }
-        Spacer(Modifier.height(16.dp))
-
-        Text("One step at a time", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(8.dp))
-        Text("$completed of 3 ready", style = MaterialTheme.typography.bodySmall, color = Muted)
+        Spacer(Modifier.height(24.dp))
+        BoardArt(com.doomly.app.R.drawable.board_pawn, Modifier.size(90.dp))
         Spacer(Modifier.height(20.dp))
+        Text("Step ${step + 1} of 3", style = MaterialTheme.typography.labelMedium, color = Muted)
+        Spacer(Modifier.height(12.dp))
         PremiumCard(Modifier.fillMaxWidth()) {
-            when {
-                !accessibilityReady -> SetupRow(Icons.Rounded.Visibility, "Recognize Reels",
-                    "Identify Reels on your screen. We'll explain the permission before opening Settings.", false)
-                !signedIn -> SetupRow(Icons.Rounded.PersonOutline, "Save your progress",
-                    "Sign in to keep your counts synced and join the league.", false)
-                !notificationGranted -> SetupRow(Icons.Rounded.NotificationsNone, "Stay informed",
-                    "Enable notifications for Doomly updates and milestones.", false)
-                else -> SetupRow(Icons.Rounded.PersonOutline, "You're ready",
-                    "Your setup is complete. Let's get started.", true)
+            Text(when(step) { 0 -> "Choose your first daily goal"; 1 -> "Let Doomly count your Reels"; else -> "Want milestone celebrations?" }, style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(12.dp))
+            Text(when(step) { 0 -> "Your thumb, your ambition. You can change this anytime."; 1 -> "Tracking is optional. Your history stays available even when it's paused."; else -> "Notifications are optional. You can change them later in Profile." }, style = MaterialTheme.typography.bodyMedium, color = Muted)
+            if (step == 0) {
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(goal, { goal = it.filter(Char::isDigit).take(5) }, label = { Text("Reels per day") },
+                    singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    isError = goal.isNotEmpty() && goal.toIntOrNull() !in 1..20_000,
+                    supportingText = { Text("Choose between 1 and 20,000.") }, modifier = Modifier.fillMaxWidth())
             }
         }
-
-        authError?.let {
-            Spacer(Modifier.height(10.dp))
-            Text(it, color = Danger, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
-        }
-        Spacer(Modifier.height(16.dp))
-        Button(
-            onClick = ::continueSetup,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
-            shape = RoundedCornerShape(7.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Frost, contentColor = Void)
-        ) {
-            Text(if (completed == 3) "Get started" else nextLabel(accessibilityReady, signedIn))
-            Spacer(Modifier.width(8.dp))
-            Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, modifier = Modifier.size(18.dp))
-        }
-
-        Spacer(Modifier.height(16.dp))
-        Text("You can review these permissions later in Android Settings.", style = MaterialTheme.typography.labelSmall, color = Muted, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(28.dp))
-    }
-
-    if (showAccessibilityDisclosure) {
-        AlertDialog(
-            onDismissRequest = { showAccessibilityDisclosure = false },
-            title = { Text("Before you enable Reel recognition") },
-            text = {
-                Text(
-                    "Doomly uses Android Accessibility to inspect visible Instagram screen labels and controls so it can recognize when a Reel is shown. " +
-                        "It creates a short local fingerprint from visible creator and caption text to avoid duplicate counts. " +
-                        "Original screen text is not stored or uploaded; only aggregate Reel counts sync to your account. " +
-                        "Doomly does not tap, type, message, or control Instagram."
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showAccessibilityDisclosure = false
-                    context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                }) { Text("I understand — continue") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAccessibilityDisclosure = false }) { Text("Not now") }
+        Spacer(Modifier.height(20.dp))
+        Button(onClick = {
+            when(step) {
+                0 -> { DoomStatsStore.setDailyTarget(context, goal.toInt()); step = 1 }
+                1 -> disclosure = true
+                else -> if (denied || Build.VERSION.SDK_INT < 33) context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+                    else launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
-        )
-    }
-}
-
-@Composable
-private fun SetupRow(icon: ImageVector, title: String, body: String, done: Boolean) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(36.dp).background(if (done) Mint.copy(alpha = .35f) else PanelRaised, CircleShape), Alignment.Center) {
-            Icon(icon, null, tint = Frost, modifier = Modifier.size(18.dp))
+        }, enabled = step != 0 || goal.toIntOrNull() in 1..20_000, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+            Text(when(step) { 0 -> "Set my goal"; 1 -> "Enable tracking"; else -> if (denied) "Open notification settings" else "Enable notifications" })
         }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleSmall)
-            Text(body, style = MaterialTheme.typography.bodySmall, color = Muted)
-        }
-        Spacer(Modifier.width(8.dp))
-        StatusDot(done)
+        if (step > 0) TextButton(onClick = { if (step == 1) step = 2 else finish() }) { Text("Not now") }
+        if (denied && step == 2) Text("No problem—you can keep using Doomly without notifications.", color = Muted, style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(16.dp))
+        Text("No account needed. Sign in later to join the league.", style = MaterialTheme.typography.bodySmall, color = Muted)
     }
-}
-
-private fun nextLabel(accessibility: Boolean, signedIn: Boolean) = when {
-    !accessibility -> "Allow Reel recognition"
-    !signedIn -> "Sign in to continue"
-    else -> "Allow notifications"
-}
-
-private fun notificationsEnabled(context: Context) =
-    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-
-private fun Context.findActivity(): Activity? {
-    var current = this
-    while (current is ContextWrapper) {
-        if (current is Activity) return current
-        current = current.baseContext
-    }
-    return null
+    if (disclosure) TrackingDisclosure(onDismiss = { disclosure = false })
 }

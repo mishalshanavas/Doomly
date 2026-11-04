@@ -4,10 +4,8 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,11 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.doomly.app.ui.theme.*
 import java.time.LocalDate
@@ -65,69 +60,4 @@ fun WeekStrip(history: Map<String, Int>, todayCount: Int) {
 @Composable
 fun BoardArt(@DrawableRes asset: Int, modifier: Modifier = Modifier, description: String? = null) {
     Image(painterResource(asset), description, modifier)
-}
-
-@Composable
-fun TurnTile(title: String, value: String, @DrawableRes asset: Int,
-             modifier: Modifier = Modifier, tint: Color = Color.Transparent,
-             onClick: (() -> Unit)? = null) {
-    Column(modifier.then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-        .background(tint).padding(top = 17.dp, start = 6.dp, end = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(title, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, color = Frost)
-        Spacer(Modifier.height(5.dp))
-        Text(value, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, color = Frost)
-        Spacer(Modifier.weight(1f))
-        BoardArt(asset, Modifier.size(51.dp))
-    }
-}
-
-@Composable
-fun BoardConnector(toRight: Boolean) {
-    Row(Modifier.fillMaxWidth()) {
-        if (toRight) Spacer(Modifier.weight(2f))
-        Box(Modifier.weight(1f).height(24.dp).border(1.dp, Hairline), Alignment.Center) {
-            Text("⌄", color = Frost, style = MaterialTheme.typography.bodyMedium)
-        }
-        if (!toRight) Spacer(Modifier.weight(2f))
-    }
-}
-
-@Composable
-fun BoardRow(content: @Composable RowScope.() -> Unit) {
-    val tileHeight = (142 * LocalDensity.current.fontScale.coerceAtLeast(1f)).dp
-    Row(Modifier.fillMaxWidth().height(tileHeight).clip(RoundedCornerShape(7.dp))
-        .border(1.dp, Hairline, RoundedCornerShape(7.dp)), content = content)
-}
-
-@Composable
-fun TileDivider() { Box(Modifier.width(1.dp).fillMaxHeight().background(Hairline)) }
-
-@androidx.compose.ui.tooling.preview.Preview(name = "Board / 360dp", widthDp = 360, showBackground = true)
-@androidx.compose.ui.tooling.preview.Preview(name = "Board / larger text", widthDp = 320, fontScale = 1.5f, showBackground = true)
-@Composable
-private fun TurnBoardPreview() {
-    DoomlyTheme {
-        Column(Modifier.background(Void).padding(20.dp)) {
-            TurnHeader("It's your turn")
-            Spacer(Modifier.height(20.dp))
-            WeekStrip(emptyMap(), 12)
-            Spacer(Modifier.height(20.dp))
-            BoardRow {
-                TurnTile("Today's\nReels", "12", com.doomly.app.R.drawable.board_phone, Modifier.weight(1f).fillMaxHeight(), Peach)
-                TileDivider()
-                TurnTile("Daily\nlimit", "100", com.doomly.app.R.drawable.board_flag, Modifier.weight(1f).fillMaxHeight())
-                TileDivider()
-                TurnTile("Limit\nused", "12%", com.doomly.app.R.drawable.board_clock, Modifier.weight(1f).fillMaxHeight())
-            }
-            BoardConnector(true)
-            BoardRow {
-                TurnTile("Current\nstreak", "3 days", com.doomly.app.R.drawable.board_tree, Modifier.weight(1f).fillMaxHeight())
-                TileDivider()
-                TurnTile("Remaining\ntoday", "88", com.doomly.app.R.drawable.board_coffee, Modifier.weight(1f).fillMaxHeight(), Aqua)
-                TileDivider()
-                TurnTile("Your\nlevel", "2", com.doomly.app.R.drawable.board_trophy, Modifier.weight(1f).fillMaxHeight())
-            }
-        }
-    }
 }

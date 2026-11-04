@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import com.doomly.app.data.AuthRepository
 import com.doomly.app.ui.navigation.DoomlyNav
@@ -14,15 +15,17 @@ import com.doomly.app.ui.theme.DoomlyTheme
 
 class MainActivity : ComponentActivity() {
 
+    private var notificationDestination = mutableStateOf<String?>(null)
     private var resumeCount = mutableIntStateOf(0)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        consumeNotificationIntent(intent)
 
         setContent {
             DoomlyTheme {
-                DoomlyNav(resumeCount = resumeCount.intValue)
+                DoomlyNav(resumeCount = resumeCount.intValue, notificationDestination = notificationDestination.value, onNotificationHandled = { notificationDestination.value = null })
             }
         }
     }
@@ -30,10 +33,17 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        consumeNotificationIntent(intent)
         if (AuthRepository.getInstance().handleDeepLink(this, intent.data)) {
             // Consume the callback so onResume cannot process the same tokens twice.
             setIntent(Intent(this, MainActivity::class.java))
         }
+    }
+
+    private fun consumeNotificationIntent(incoming: Intent?) {
+        notificationDestination.value = incoming?.getStringExtra("notification_destination")
+            ?: if (incoming?.hasExtra("google.message_id") == true) "profile" else null
+        incoming?.removeExtra("notification_destination")
     }
 
     override fun onResume() {

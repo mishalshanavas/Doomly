@@ -21,16 +21,16 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.*
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.doomly.app.BuildConfig
 import com.doomly.app.DoomStatsStore
 import com.doomly.app.ProfileViewModel
 import com.doomly.app.data.AuthRepository
-import com.doomly.app.ui.components.DisclosureSection
+import com.doomly.app.ui.components.SignInButton
+import com.doomly.app.ui.components.NotificationSettings
+import com.doomly.app.CloudSyncScheduler
+import com.doomly.app.ui.components.GeneratedAvatar
 import com.doomly.app.ui.components.TurnHeader
 import com.doomly.app.ui.components.PremiumCard
 import com.doomly.app.ui.components.DailyUsageHeatmap
@@ -39,16 +39,22 @@ import com.doomly.app.update.GitHubUpdateManager
 import com.doomly.app.update.UpdateState
 
 @Composable
-fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Unit = {}) {
-    val owner = LocalLifecycleOwner.current
+fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Unit = {}, resumeCount: Int = 0) {
+    LaunchedEffect(resumeCount) { viewModel.refresh() }
     val context = LocalContext.current
     val name by viewModel.getDisplayName().observeAsState("Doomly user")
-    val initials by viewModel.getInitials().observeAsState("D")
     val email by viewModel.getEmail().observeAsState("Local profile")
     val streak by viewModel.getStreak().observeAsState("0")
     val target by viewModel.getDailyTarget().observeAsState(DoomStatsStore.DEFAULT_DAILY_TARGET)
     val total by viewModel.getTotalReels().observeAsState("0")
     val signedIn by viewModel.getSignedIn().observeAsState(false)
+    val localAvatarSeed = remember(context) {
+        val prefs = context.getSharedPreferences("doomly_identity", Context.MODE_PRIVATE)
+        prefs.getString("avatar_seed", null) ?: java.util.UUID.randomUUID().toString().also {
+            prefs.edit().putString("avatar_seed", it).apply()
+        }
+    }
+    val avatarSeed = if (signedIn) AuthRepository.getInstance().currentUid(context).ifBlank { email } else localAvatarSeed
     var confirmSignOut by remember { mutableStateOf(false) }
     val updateManager = remember(context) { GitHubUpdateManager(context) }
     var updateState by remember { mutableStateOf<UpdateState>(UpdateState.Checking) }
@@ -62,14 +68,9 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         context.findActivity()?.let { updateManager.install(it, ready) }
     }
 
-    DisposableEffect(owner) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh() }
-        owner.lifecycle.addObserver(observer)
-        viewModel.refresh()
-        onDispose { owner.lifecycle.removeObserver(observer) }
-    }
+    com.doomly.app.ui.components.StatsRefreshEffect { viewModel.refresh() }
     DisposableEffect(updateManager) { onDispose(updateManager::cancel) }
-    val best = DoomStatsStore.dailyHistory(context).values.maxOrNull() ?: 0
+    val best = maxOf(DoomStatsStore.dailyHistory(context).values.maxOrNull() ?: 0, DoomStatsStore.snapshot(context).todayReels)
     val usageHistory = DoomStatsStore.dailyHistory(context).toMutableMap().apply {
         put(java.time.LocalDate.now().toString(), DoomStatsStore.snapshot(context).todayReels)
     }
@@ -77,10 +78,11 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
     if (confirmSignOut) AlertDialog(
         onDismissRequest = { confirmSignOut = false },
         title = { Text("Sign out of Doomly?") },
-        text = { Text("Your local counts stay on this device, but cloud sync and the league will pause.") },
+        text = { Text("Your counts stay on this device. Sign in again whenever you want to rejoin the league.") },
         confirmButton = {
             TextButton(onClick = {
                 AuthRepository.getInstance().signOut(context)
+                viewModel.refresh()
                 confirmSignOut = false
                 onSignOut()
             }) { Text("Sign out", color = Danger) }
@@ -96,64 +98,57 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         TurnHeader("Your profile")
         Spacer(Modifier.height(26.dp))
 
-        Box(Modifier.size(82.dp).background(Mint, RoundedCornerShape(7.dp)), Alignment.Center) {
-            Text(initials, style = MaterialTheme.typography.headlineMedium, color = Frost)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            GeneratedAvatar(avatarSeed, Modifier.size(76.dp))
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(name, style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.height(4.dp))
+                Text(email, style = MaterialTheme.typography.bodySmall, color = Muted)
+            }
         }
-        Spacer(Modifier.height(12.dp))
-        Text(name, style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
-        Text(email, style = MaterialTheme.typography.bodySmall, color = Muted)
-        Spacer(Modifier.height(22.dp))
+        Spacer(Modifier.height(24.dp))
 
-        DisclosureSection("Usage history", "Streak, lifetime counts and the last 30 days") {
-            PremiumCard(Modifier.fillMaxWidth()) {
-                Text("LIFETIME REELS", style = MaterialTheme.typography.labelSmall, color = Muted)
-                Spacer(Modifier.height(5.dp))
-                Text(total, style = MaterialTheme.typography.displayMedium)
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ProfileStat(streak, "DAY STREAK", Modifier.weight(1f))
-                ProfileStat(target.toString(), "DAILY GOAL", Modifier.weight(1f))
-                ProfileStat(best.toString(), "MOST REELS", Modifier.weight(1f))
-            }
-            Spacer(Modifier.height(18.dp))
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ProfileStat(total, "Lifetime Reels", Modifier.weight(1f))
+            ProfileStat(streak, "Day streak", Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(10.dp))
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ProfileStat(target.toString(), "Daily goal", Modifier.weight(1f))
+            ProfileStat(best.toString(), "Most Reels in a day", Modifier.weight(1f))
+        }
+        Spacer(Modifier.height(20.dp))
+        PremiumCard(Modifier.fillMaxWidth()) {
             DailyUsageHeatmap(usageHistory, Modifier.fillMaxWidth())
         }
         if (BuildConfig.ENABLE_GITHUB_UPDATES) {
             Spacer(Modifier.height(22.dp))
-            val needsAttention = updateState !is UpdateState.UpToDate && updateState !is UpdateState.Checking
-            DisclosureSection("App updates", if (needsAttention) "An update needs your attention" else "Version ${BuildConfig.VERSION_NAME}",
-                initiallyExpanded = needsAttention, key = needsAttention) {
-                UpdateCard(
-                    state = updateState,
-                    onCheck = { updateManager.check { updateState = it } },
-                    onDownload = { release -> updateManager.download(release) { updateState = it } },
-                    onInstall = { ready ->
-                        val started = context.findActivity()?.let { updateManager.install(it, ready) } == true
-                        if (!started) updateState = UpdateState.Failed("Android could not open the package installer.")
-                    }
-                )
-            }
+            UpdateCard(
+                state = updateState,
+                onCheck = { updateManager.check { updateState = it } },
+                onDownload = { release -> updateManager.download(release) { updateState = it } },
+                onInstall = { ready ->
+                    val started = context.findActivity()?.let { updateManager.install(it, ready) } == true
+                    if (!started) updateState = UpdateState.Failed("Android could not open the package installer.")
+                }
+            )
         }
 
         Spacer(Modifier.height(22.dp))
-        Text("ACCOUNT", style = MaterialTheme.typography.labelSmall, color = Muted, modifier = Modifier.fillMaxWidth())
-        Spacer(Modifier.height(8.dp))
-        Row(
-            Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(7.dp)).padding(15.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(Modifier.size(34.dp).background(Frost, CircleShape), Alignment.Center) {
-                Icon(Icons.Rounded.Check, null, tint = Void, modifier = Modifier.size(18.dp))
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Cloud sync", style = MaterialTheme.typography.titleSmall)
-                Text(if (signedIn) "Signed in and keeping score" else "Local-only mode", style = MaterialTheme.typography.bodySmall, color = Muted)
-            }
-            Text(if (signedIn) "ON" else "OFF", style = MaterialTheme.typography.labelSmall)
+        if (!signedIn) {
+            Text("Join the league", style = MaterialTheme.typography.titleMedium, modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(6.dp))
+            Text("Give your thumb a place on the podium.", style = MaterialTheme.typography.bodySmall, color = Muted,
+                modifier = Modifier.fillMaxWidth())
+            Spacer(Modifier.height(12.dp))
+            SignInButton(onSuccess = {
+                viewModel.refresh()
+                CloudSyncScheduler.scheduleSync(context)
+            })
         }
-
+        Spacer(Modifier.height(16.dp))
+        NotificationSettings(resumeCount)
         if (signedIn) {
             Spacer(Modifier.height(12.dp))
             OutlinedButton(
@@ -265,10 +260,10 @@ private fun UpdateCard(
 
 @Composable
 private fun ProfileStat(value: String, label: String, modifier: Modifier = Modifier) {
-    Column(modifier.background(Panel, RoundedCornerShape(7.dp)).padding(13.dp)) {
-        Text(value, style = MaterialTheme.typography.titleLarge, maxLines = 1)
+    Column(modifier.fillMaxHeight().background(Panel, RoundedCornerShape(7.dp)).padding(16.dp)) {
+        Text(value, style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(5.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Muted, maxLines = 1)
+        Text(label, style = MaterialTheme.typography.bodySmall, color = Muted)
     }
 }
 

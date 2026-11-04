@@ -6,92 +6,122 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.*
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.doomly.app.LeagueViewModel
 import com.doomly.app.data.LeaderboardRepository
+import com.doomly.app.ui.components.SignInButton
 import com.doomly.app.ui.components.TurnHeader
 import com.doomly.app.ui.components.BoardArt
-import com.doomly.app.ui.components.PremiumCard
+import com.doomly.app.ui.components.GeneratedAvatar
+import androidx.compose.foundation.border
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import com.doomly.app.ui.theme.*
 
 @Composable
-fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel()) {
-    var showAll by rememberSaveable { mutableStateOf(false) }
-    val owner = LocalLifecycleOwner.current
+fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel(), resumeCount: Int = 0) {
+    val signedIn by viewModel.getSignedIn().observeAsState(false)
+    LaunchedEffect(resumeCount) { viewModel.refresh() }
     val loading by viewModel.getLoading().observeAsState(false)
     val entries by viewModel.getEntries().observeAsState(emptyList())
     val errorTitle by viewModel.getErrorTitle().observeAsState()
     val errorBody by viewModel.getErrorBody().observeAsState()
 
-    DisposableEffect(owner) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh() }
-        owner.lifecycle.addObserver(observer)
-        viewModel.refresh()
-        onDispose { owner.lifecycle.removeObserver(observer) }
-    }
-
     Column(Modifier.fillMaxSize().background(Void).padding(horizontal = 24.dp)) {
         Spacer(Modifier.height(26.dp))
         TurnHeader("The league", "Same board. A little friendly competition.")
         Spacer(Modifier.height(20.dp))
+        if (signedIn && entries.isNotEmpty() && (errorTitle != null || loading)) {
+            Text(if (loading) "Updating rankings…" else "Showing earlier rankings · refresh failed", style = MaterialTheme.typography.bodySmall, color = Muted)
+            TextButton(onClick = { viewModel.refresh() }, enabled = !loading) { Text("Retry") }
+        }
         when {
-            loading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+            !signedIn -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Join the league", style = MaterialTheme.typography.headlineSmall)
+                Spacer(Modifier.height(8.dp))
+                Text("Sign in to put your score on today's board. Your counts stay on this device.", style = MaterialTheme.typography.bodyMedium, color = Muted)
+                Spacer(Modifier.height(16.dp))
+                SignInButton(onSuccess = { viewModel.refresh() })
+            }
+            loading && entries.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                 CircularProgressIndicator(color = Frost, strokeWidth = 2.dp)
             }
             entries.isEmpty() -> EmptyState(
                 errorTitle ?: "The room is suspiciously quiet",
-                errorBody ?: "Watch a few Reels and claim the least competitive first place."
+                errorBody ?: "Watch a few Reels and claim the least competitive first place.",
+                onRetry = { viewModel.refresh() }
             )
             else -> LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 contentPadding = PaddingValues(bottom = 28.dp)
             ) {
                 item {
-                    LeaderSummary(entries.first())
+                    LeaguePodium(entries.take(3))
                     Spacer(Modifier.height(20.dp))
-                    Text("TODAY · REELS", style = MaterialTheme.typography.labelSmall, color = Muted)
-                    Spacer(Modifier.height(2.dp))
-                }
-                items(entries.take(if (showAll) 30 else 5), key = { it.uid + it.rank }) { entry -> LeaderRow(entry) }
-                if (entries.size > 5) item {
-                    TextButton(onClick = { showAll = !showAll }, modifier = Modifier.fillMaxWidth()) {
-                        Text(if (showAll) "Show top 5" else "Show more players")
+                    TextButton(onClick = { viewModel.refresh() }, enabled = !loading) { Text("Refresh rankings") }
+                    if (entries.size > 3) {
+                        Text("THE REST OF THE LEAGUE · REELS", style = MaterialTheme.typography.labelSmall, color = Muted)
+                        Spacer(Modifier.height(2.dp))
                     }
                 }
+                items(entries.drop(3).take(27), key = { it.uid + it.rank }) { entry -> LeaderRow(entry) }
             }
         }
     }
 }
 
 @Composable
-private fun LeaderSummary(leader: LeaderboardRepository.LeaderboardEntry) {
-    PremiumCard(Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).background(Peach, CircleShape), Alignment.Center) {
-                BoardArt(com.doomly.app.R.drawable.board_trophy, Modifier.size(40.dp))
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text("LEADING TODAY", style = MaterialTheme.typography.labelSmall, color = Muted)
-                Text(leader.displayName, style = MaterialTheme.typography.titleLarge, maxLines = 1)
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text("${leader.reels}", style = MaterialTheme.typography.headlineMedium)
-                Text("REELS", style = MaterialTheme.typography.labelSmall, color = Muted)
+private fun LeaguePodium(entries: List<LeaderboardRepository.LeaderboardEntry>) {
+    val byRank = entries.associateBy { it.rank }
+    // Keep the winner in the middle; absent places are omitted rather than invented.
+    val places = listOfNotNull(byRank[2], byRank[1], byRank[3])
+    val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Text("THE THUMB CHAMPIONS", style = MaterialTheme.typography.labelSmall, color = Muted)
+        Spacer(Modifier.height(20.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
+            places.forEach { entry ->
+                val winner = entry.rank == 1
+                val color = when (entry.rank) { 1 -> Mint; 2 -> Aqua; else -> Peach }
+                val podiumHeight = when (entry.rank) { 1 -> 128; 2 -> 106; else -> 88 }
+                Column(Modifier.weight(1f).semantics(mergeDescendants = true) {
+                    contentDescription = "Rank ${entry.rank}, ${entry.displayName}, ${entry.reels} Reels"
+                }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (winner) {
+                        BoardArt(com.doomly.app.R.drawable.board_trophy, Modifier.size(30.dp))
+                        Spacer(Modifier.height(8.dp))
+                    }
+                    GeneratedAvatar(entry.uid.ifBlank { entry.displayName }, Modifier.size(if (winner) 64.dp else 50.dp))
+                    Spacer(Modifier.height(10.dp))
+                    Text(entry.displayName.ifBlank { "Doomly player" },
+                        style = MaterialTheme.typography.titleSmall, color = Frost,
+                        textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = (40 * fontScale).dp))
+                    Spacer(Modifier.height(8.dp))
+                    Column(Modifier.fillMaxWidth().background(color, RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+                        .border(1.dp, Hairline.copy(alpha = .45f), RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+                        .heightIn(min = (podiumHeight * fontScale).dp).padding(horizontal = 6.dp, vertical = 10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Text("${entry.rank}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black, color = Frost)
+                        Spacer(Modifier.height(3.dp))
+                        Text("${entry.reels}", style = MaterialTheme.typography.titleSmall, color = Frost)
+                        Text("REELS", style = MaterialTheme.typography.labelSmall, color = Muted)
+                    }
+                }
             }
         }
+        HorizontalDivider(color = Hairline.copy(alpha = .45f))
     }
 }
 
@@ -108,19 +138,17 @@ private fun LeaderRow(entry: LeaderboardRepository.LeaderboardEntry) {
             color = if (entry.rank <= 3) Frost else Muted,
             modifier = Modifier.width(28.dp)
         )
-        Box(Modifier.size(38.dp).background(if (entry.rank == 1) Mint.copy(alpha = .5f) else PanelRaised, CircleShape), Alignment.Center) {
-            Text(entry.initials(), style = MaterialTheme.typography.labelMedium)
-        }
+        GeneratedAvatar(entry.uid.ifBlank { entry.displayName }, Modifier.size(38.dp))
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(entry.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1)
+            Text(entry.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Text(entry.reels.toString(), style = MaterialTheme.typography.titleMedium)
     }
 }
 
 @Composable
-private fun EmptyState(title: String, body: String) {
+private fun EmptyState(title: String, body: String, onRetry: () -> Unit) {
     Box(Modifier.fillMaxSize(), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(30.dp)) {
             Box(Modifier.size(80.dp).background(Peach, CircleShape), Alignment.Center) {
@@ -130,6 +158,8 @@ private fun EmptyState(title: String, body: String) {
             Text(title, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
             Spacer(Modifier.height(5.dp))
             Text(body, style = MaterialTheme.typography.bodyMedium, color = Muted, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(12.dp))
+            TextButton(onClick = onRetry) { Text("Try again") }
         }
     }
 }

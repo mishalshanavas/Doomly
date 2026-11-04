@@ -15,8 +15,13 @@ public final class MotivationEngine {
     public static int nextMilestone(int reels, int target) {
         int safeReels = Math.max(0, reels);
         int safeTarget = Math.max(1, target);
-        int step = Math.max(25, Math.min(250, safeTarget / 10));
-        return Math.min(safeTarget, ((safeReels / step) + 1) * step);
+        int next = (safeReels / 25 + 1) * 25;
+        return safeReels < safeTarget ? Math.min(safeTarget, next) : next;
+    }
+
+    public static int reachedMilestone(int reels, int target) {
+        int count = Math.max(0, reels);
+        return Math.max(count / 25 * 25, count >= Math.max(1, target) ? Math.max(1, target) : 0);
     }
 
     public static String message(int reels, int target, int streak) {

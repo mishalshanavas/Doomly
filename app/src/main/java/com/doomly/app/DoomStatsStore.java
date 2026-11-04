@@ -36,7 +36,7 @@ public final class DoomStatsStore {
         int todayLikes = prefs.getInt(KEY_TODAY_LIKES, 0);
         int totalReels = prefs.getInt(KEY_TOTAL_REELS, 0);
         int totalLikes = prefs.getInt(KEY_TOTAL_LIKES, 0);
-        int streak = prefs.getInt(KEY_STREAK, 0);
+        int streak = StatsDatePolicy.visibleStreak(prefs.getInt(KEY_STREAK, 0), prefs.getString(KEY_LAST_ACTIVE_DAY, ""), LocalDate.now());
         int dailyTarget = prefs.getInt(KEY_DAILY_TARGET, DEFAULT_DAILY_TARGET);
         String displayName = prefs.getString(KEY_DISPLAY_NAME, "");
         return new Snapshot(

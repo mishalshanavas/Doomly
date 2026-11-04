@@ -4,9 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.keyframes
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -16,36 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.doomly.app.R
 import com.doomly.app.ui.theme.*
 import kotlinx.coroutines.delay
-
-/** A tiny, user-triggered high five. No idle loop competing with the main content. */
-@Composable
-fun PlayfulPawn() {
-    var taps by remember { mutableIntStateOf(0) }
-    val wiggle = remember { Animatable(0f) }
-    LaunchedEffect(taps) {
-        if (taps == 0) return@LaunchedEffect
-        wiggle.snapTo(0f)
-        wiggle.animateTo(0f, keyframes {
-            durationMillis = 420
-            -1f at 85
-            1f at 185
-            -.45f at 290
-            0f at 420
-        })
-    }
-    Box(Modifier.size(56.dp).clickable(role = Role.Button, onClickLabel = "High-five your procrastination pal") { taps++ },
-        Alignment.Center) {
-        BoardArt(R.drawable.board_pawn, Modifier.size(48.dp).graphicsLayer {
-            rotationZ = wiggle.value * 12f
-            translationY = -kotlin.math.abs(wiggle.value) * 5.dp.toPx()
-        }, "Your procrastination pal")
-    }
-}
 
 /** A short celebration driven by a newly crossed milestone, not by recomposition. */
 @Composable

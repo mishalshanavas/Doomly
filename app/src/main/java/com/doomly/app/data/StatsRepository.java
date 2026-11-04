@@ -41,7 +41,7 @@ public final class StatsRepository {
                             String photoUrl, ResultCallback<Void> callback) {
         DoomStatsStore.Snapshot snap = DoomStatsStore.snapshot(context);
         SupabaseClient client = SupabaseClient.getInstance();
-        if (client == null || !client.getConfig().isConfigured()) { callback.onSuccess(null); return; }
+        if (client == null || !client.getConfig().isConfigured()) { callback.onError("Sync is unavailable."); return; }
 
         client.upsertUser(uid, displayName, snap.dailyTarget, snap.totalReels, snap.streak, snap.streak,
             new ResultCallback<Void>() {
@@ -65,7 +65,9 @@ public final class StatsRepository {
                     if (user.has("display_name")) { String n = user.optString("display_name", ""); if (!n.isEmpty()) DoomStatsStore.setDisplayName(context, n); }
                 } catch (Exception e) { callback.onError("Invalid profile data: " + e.getMessage()); return; }
                 client.fetchHistory(uid, new ResultCallback<org.json.JSONArray>() {
-                    @Override public void onSuccess(org.json.JSONArray arr) { DoomStatsStore.mergeDailyHistory(context, arr); callback.onSuccess(null); }
+                    @Override public void onSuccess(org.json.JSONArray arr) { DoomStatsStore.mergeDailyHistory(context, arr);
+                        context.sendBroadcast(new android.content.Intent(DoomStatsStore.ACTION_STATS_CHANGED).setPackage(context.getPackageName()));
+                        callback.onSuccess(null); }
                     @Override public void onError(String m) { callback.onError(m); }
                 });
             }

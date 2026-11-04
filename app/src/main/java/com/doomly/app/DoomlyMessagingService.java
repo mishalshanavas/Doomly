@@ -27,27 +27,13 @@ public final class DoomlyMessagingService extends FirebaseMessagingService {
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(
                 this, android.Manifest.permission.POST_NOTIFICATIONS
         ) != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
-        String title = message.getNotification() != null && message.getNotification().getTitle() != null
-                ? message.getNotification().getTitle() : "Doomly";
-        String body = message.getNotification() != null && message.getNotification().getBody() != null
-                ? message.getNotification().getBody() : "Your doomscroll report has news.";
-        NotificationManagerCompat.from(this).notify((int) System.currentTimeMillis(),
-                new NotificationCompat.Builder(this, CHANNEL_ID)
-                        .setSmallIcon(R.drawable.ic_stat_doomly)
-                        .setContentTitle(title)
-                        .setContentText(body)
-                        .setAutoCancel(true)
-                        .setContentIntent(PendingIntent.getActivity(this, 0,
-                                new Intent(this, MainActivity.class),
-                                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE))
-                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                        .build());
+        String title = message.getData().get("title");
+        String body = message.getData().get("body");
+        if (title == null && message.getNotification() != null) title = message.getNotification().getTitle();
+        if (body == null && message.getNotification() != null) body = message.getNotification().getBody();
+        DoomlyNotifications.show(this, title == null ? "Doomly" : title,
+                body == null ? "Your doomscroll report has news." : body);
     }
 
-    static void ensureChannel(android.content.Context context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
-        NotificationManager manager = context.getSystemService(NotificationManager.class);
-        if (manager != null) manager.createNotificationChannel(new NotificationChannel(
-                CHANNEL_ID, "Doomly admin updates", NotificationManager.IMPORTANCE_DEFAULT));
-    }
+    static void ensureChannel(android.content.Context context) { DoomlyNotifications.createChannel(context); }
 }

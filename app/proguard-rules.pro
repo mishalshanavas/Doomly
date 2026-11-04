@@ -32,13 +32,6 @@
 -keep class com.doomly.app.DoomStatsStore$Snapshot { *; }
 -keep class com.doomly.app.data.LeaderboardRepository$LeaderboardEntry { *; }
 -keep class com.doomly.app.data.SupabaseConfig { *; }
--keep class com.doomly.app.data.SupabaseSession { *; }
-
-# ── Custom views ────────────────────────────────────────────────────────
--keep class com.doomly.app.ui.DoomlyMascotView { *; }
--keep class com.doomly.app.ui.DoomlyHeroView { *; }
--keep class com.doomly.app.ui.MascotView { *; }
--keep class com.doomly.app.ui.AnimatedRingView { *; }
 
 # ── Accessibility service ───────────────────────────────────────────────
 -keep class com.doomly.app.DoomlyAccessibilityService { *; }
@@ -52,7 +45,6 @@
 
 # ── ResultCallback (used across modules) ────────────────────────────────
 -keep class com.doomly.app.ResultCallback { *; }
--keep class com.doomly.app.Refreshable { *; }
 
 # ── ViewModels ──────────────────────────────────────────────────────────
 -keep class com.doomly.app.TodayViewModel { *; }

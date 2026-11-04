@@ -70,7 +70,7 @@ Deno.serve(async (request) => {
     const result = await fetch(`https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`, {
       method: "POST",
       headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
-      body: JSON.stringify({ message: { token: row.token, notification: { title, body } } }),
+      body: JSON.stringify({ message: { token: row.token, data: { title, body }, android: { priority: "normal" } } }),
     });
     if (result.ok) sent++;
   }

@@ -15,6 +15,7 @@ import java.time.LocalDate
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -23,36 +24,35 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.*
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.doomly.app.*
 import com.doomly.app.ui.components.*
 import com.doomly.app.ui.theme.*
 
 @Composable
-fun HomeScreen(viewModel: TodayViewModel = viewModel()) {
+fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
     val context = LocalContext.current
-    val owner = LocalLifecycleOwner.current
     val snapshot by viewModel.getSnapshot().observeAsState()
     val coach by viewModel.getCoachMessage().observeAsState()
     var editGoal by rememberSaveable { mutableStateOf(false) }
+    var goalFeedback by rememberSaveable { mutableStateOf<String?>(null) }
     var goalText by rememberSaveable { mutableStateOf("") }
 
-    DisposableEffect(owner) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) viewModel.refresh() }
-        owner.lifecycle.addObserver(observer)
-        viewModel.refresh()
-        onDispose { owner.lifecycle.removeObserver(observer) }
-    }
+    com.doomly.app.ui.components.StatsRefreshEffect { viewModel.refresh() }
 
     val reels = snapshot?.todayReels ?: 0
     val total = snapshot?.totalReels ?: 0
@@ -73,8 +73,8 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel()) {
         lastCount = reels
         // Hydration establishes a baseline; returning with new counts can celebrate once.
         if (previous != null && reels > previous) {
-            if (reels / 25 > previous / 25) {
-                milestone = reels / 25 * 25
+            if (MotivationEngine.reachedMilestone(reels, target) > MotivationEngine.reachedMilestone(previous, target)) {
+                milestone = MotivationEngine.reachedMilestone(reels, target)
                 celebrationEvent++
             }
             countPop.snapTo(1f)
@@ -90,7 +90,11 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel()) {
         value = goalText,
         onValue = { goalText = it },
         onSave = {
-            CloudSyncScheduler.updateDailyTarget(context, goalText.toIntOrNull()?.coerceIn(1, 20_000) ?: target, quietCallback())
+            goalFeedback = "Daily goal updated."
+            CloudSyncScheduler.updateDailyTarget(context, goalText.toIntOrNull()?.coerceIn(1, 20_000) ?: target, object : ResultCallback<Void> {
+                override fun onSuccess(value: Void?) = Unit
+                override fun onError(message: String) = Unit
+            })
             viewModel.refresh()
             editGoal = false
         },
@@ -101,33 +105,57 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel()) {
     val reelPressed by reelInteraction.collectIsPressedAsState()
     val buttonScale by animateFloatAsState(if (reelPressed) .97f else 1f,
         spring(dampingRatio = .65f, stiffness = 700f), label = "Reels button press")
+    LaunchedEffect(resumeCount) { viewModel.refresh() }
     val history = DoomStatsStore.dailyHistory(context)
     Column(Modifier.fillMaxSize().background(Void).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
         Spacer(Modifier.height(26.dp))
-        TurnHeader("It's your turn")
-        Spacer(Modifier.height(28.dp))
-        PremiumCard(Modifier.fillMaxWidth()) {
-            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                Text("TODAY'S REELS", style = MaterialTheme.typography.labelSmall, color = Muted)
-                PlayfulPawn()
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) { TurnHeader("Today") }
+            Row(Modifier.background(Mint.copy(alpha = .12f), RoundedCornerShape(10.dp))
+                .padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.LocalFireDepartment, null, tint = Frost, modifier = Modifier.size(21.dp))
+                Spacer(Modifier.width(6.dp))
+                Column {
+                    Text("$streak ${if (streak == 1) "day" else "days"}", style = MaterialTheme.typography.titleSmall, color = Frost)
+                    Text("STREAK", style = MaterialTheme.typography.labelSmall, color = Muted)
+                }
             }
-            Text("$animatedReels", style = MaterialTheme.typography.displayLarge, color = Frost,
-                modifier = Modifier.graphicsLayer { scaleX = countPop.value; scaleY = countPop.value })
-            Spacer(Modifier.height(8.dp))
-            Text("Daily goal: $target", style = MaterialTheme.typography.bodyMedium, color = Muted)
-            Spacer(Modifier.height(18.dp))
-            LinearProgressIndicator(progress = { animatedProgress }, modifier = Modifier.fillMaxWidth().height(6.dp),
-                color = if (progress >= 1f) Frost else Mint, trackColor = PanelRaised)
-            Spacer(Modifier.height(12.dp))
-            Text(if (reels >= target) "Goal crushed. Thumb athlete status: confirmed." else "${target - reels} to today's goal.",
-                style = MaterialTheme.typography.bodyMedium, color = Frost)
-            MilestonePop(milestone, celebrationEvent)
         }
-        TextButton(onClick = { goalText = target.toString(); editGoal = true }) {
-            Icon(Icons.Rounded.Edit, null, Modifier.size(16.dp), tint = Muted)
-            Spacer(Modifier.width(8.dp))
-            Text("Adjust daily goal", color = Muted)
+        Spacer(Modifier.height(24.dp))
+        WeekStrip(history, reels)
+        Spacer(Modifier.height(24.dp))
+        TrackingStatus(resumeCount)
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            HomeMetric("Reels today", "$animatedReels", "Thumb work logged", Peach,
+                Modifier.weight(1f).fillMaxHeight(), scale = countPop.value)
+            Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(10.dp))
+                .background(Aqua).border(1.dp, Hairline.copy(alpha = .45f), RoundedCornerShape(10.dp)).padding(16.dp)) {
+                Text("Daily goal", style = MaterialTheme.typography.bodySmall, color = Muted)
+                Spacer(Modifier.height(12.dp))
+                Text("$target", style = MaterialTheme.typography.headlineLarge, color = Frost)
+                TextButton(onClick = { goalText = target.toString(); editGoal = true }, contentPadding = PaddingValues(0.dp)) {
+                    Icon(Icons.Rounded.Edit, null, Modifier.size(14.dp), tint = Frost)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Edit goal", style = MaterialTheme.typography.labelMedium, color = Frost)
+                }
+            }
         }
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            HomeMetric("Next milestone", "${MotivationEngine.nextMilestone(reels, target)}", "Reels", Void,
+                Modifier.weight(1f).fillMaxHeight())
+            HomeMetric("Your level", "${MotivationEngine.level(total)}", "Professional procrastinator", Violet,
+                Modifier.weight(1f).fillMaxHeight())
+        }
+        Spacer(Modifier.height(18.dp))
+        LinearProgressIndicator(progress = { animatedProgress }, modifier = Modifier.fillMaxWidth().height(5.dp),
+            color = Mint, trackColor = PanelRaised)
+        Spacer(Modifier.height(8.dp))
+        Text(if (reels >= target) "Goal crushed. Extremely busy doing nothing." else "${target - reels} Reels to today's goal.",
+            style = MaterialTheme.typography.bodySmall, color = Muted)
+        MilestonePop(milestone, celebrationEvent)
+        goalFeedback?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Muted,
+            modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }) }
         Spacer(Modifier.height(12.dp))
         Button(
             onClick = {
@@ -148,22 +176,21 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel()) {
         Spacer(Modifier.height(18.dp))
         Text(coach ?: MotivationEngine.message(reels, target, streak),
             style = MaterialTheme.typography.bodySmall, color = Muted)
-        Spacer(Modifier.height(26.dp))
-        DisclosureSection("More details", "Your week, streak and milestones") {
-            WeekStrip(history, reels)
-            Spacer(Modifier.height(18.dp))
-            BoardRow {
-                TurnTile("Current\nstreak", "$streak days", com.doomly.app.R.drawable.board_tree,
-                    Modifier.weight(1f).fillMaxHeight())
-                TileDivider()
-                TurnTile("Your\nlevel", "${MotivationEngine.level(total)}", com.doomly.app.R.drawable.board_trophy,
-                    Modifier.weight(1f).fillMaxHeight(), Peach)
-                TileDivider()
-                TurnTile("Next\nmilestone", "${reels % 25}/25", com.doomly.app.R.drawable.board_flag,
-                    Modifier.weight(1f).fillMaxHeight())
-            }
-        }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun HomeMetric(label: String, value: String, caption: String, tint: Color,
+                       modifier: Modifier = Modifier, scale: Float = 1f) {
+    Column(modifier.clip(RoundedCornerShape(10.dp)).background(tint)
+        .border(1.dp, Hairline.copy(alpha = .45f), RoundedCornerShape(10.dp)).padding(16.dp)) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = Muted)
+        Spacer(Modifier.height(12.dp))
+        Text(value, style = MaterialTheme.typography.headlineLarge, color = Frost,
+            modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale })
+        Spacer(Modifier.height(8.dp))
+        Text(caption, style = MaterialTheme.typography.bodySmall, color = Muted)
     }
 }
 
@@ -187,11 +214,6 @@ private fun GoalDialog(value: String, onValue: (String) -> Unit, onSave: () -> U
         confirmButton = { Button(onClick = onSave, enabled = value.toIntOrNull() in 1..20_000) { Text("Save") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
-}
-
-private fun quietCallback() = object : ResultCallback<Void> {
-    override fun onSuccess(value: Void?) = Unit
-    override fun onError(message: String) = Unit
 }
 
 private fun Context.findActivity(): android.app.Activity? {

@@ -31,7 +31,10 @@ public final class CloudSyncScheduler {
             return;
         }
         StatsRepository.getInstance().syncToCloud(context, auth.currentUid(context),
-                auth.currentDisplayName(context), "", callback);
+                auth.currentDisplayName(context), "", new ResultCallback<Void>() {
+                    @Override public void onSuccess(Void value) { MAIN.post(() -> callback.onSuccess(value)); }
+                    @Override public void onError(String message) { MAIN.post(() -> callback.onError(message)); }
+                });
     }
 
     public static void updateDisplayName(Context context, String displayName, ResultCallback<Void> callback) {
