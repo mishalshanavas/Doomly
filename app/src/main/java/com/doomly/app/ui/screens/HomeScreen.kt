@@ -6,22 +6,19 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.NorthEast
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.*
@@ -30,8 +27,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.doomly.app.*
 import com.doomly.app.ui.components.*
 import com.doomly.app.ui.theme.*
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
 @Composable
@@ -70,101 +65,72 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel()) {
         onDismiss = { editGoal = false }
     )
 
-    Column(
-        Modifier.fillMaxSize().background(Void).padding(horizontal = 24.dp)
-    ) {
+    val history = DoomStatsStore.dailyHistory(context)
+    Column(Modifier.fillMaxSize().background(Void).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
         Spacer(Modifier.height(26.dp))
-        PageHeader(title = "Dashboard")
-        Spacer(Modifier.height(12.dp))
-
-        DottedOrbit(
-            progress = animatedProgress,
-            modifier = Modifier.fillMaxWidth().height(190.dp),
-            mascotScale = .42f
-        )
-
-        Text("$percent%", style = MaterialTheme.typography.displayMedium, color = Frost)
-        Text("$animatedReels / $target", style = MaterialTheme.typography.bodySmall, color = Muted)
-        Spacer(Modifier.height(18.dp))
-
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            DashboardMetric("CURRENT STREAK", if (streak == 1) "1 day" else "$streak days", Modifier.weight(1f))
-            DashboardMetric("GOAL REMAINING", "${(target - reels).coerceAtLeast(0)} Reels", Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(8.dp))
-
-        PremiumCard(
-            Modifier.fillMaxWidth().semantics { role = Role.Button }.clickable {
-                goalText = target.toString()
-                editGoal = true
-            }
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("DAILY LIMIT", style = MaterialTheme.typography.labelSmall, color = Muted)
-                    Spacer(Modifier.height(6.dp))
-                    Text("$target Reels", style = MaterialTheme.typography.titleMedium)
-                }
-                Icon(Icons.Rounded.Edit, "Edit daily goal", tint = Frost, modifier = Modifier.size(19.dp))
-            }
-        }
-
+        TurnHeader("It's your turn")
         Spacer(Modifier.height(22.dp))
-        SectionLabel("Next milestone", "LEVEL ${MotivationEngine.level(total)}")
-        Spacer(Modifier.height(8.dp))
-        PremiumCard(Modifier.fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier.size(42.dp).background(Frost, RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center
-                ) { Icon(Icons.Rounded.NorthEast, null, tint = Void, modifier = Modifier.size(20.dp)) }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(milestoneTitle(reels), style = MaterialTheme.typography.titleMedium)
-                    Text(milestoneCopy(reels), style = MaterialTheme.typography.bodySmall, color = Muted)
-                }
-                Text("${reels % 25}/25", style = MaterialTheme.typography.labelMedium)
+        WeekStrip(history, reels)
+        Spacer(Modifier.height(25.dp))
+        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+            Text("▢  $animatedReels / $target Reels", style = MaterialTheme.typography.bodyMedium, color = Frost)
+            TextButton(onClick = { goalText = target.toString(); editGoal = true }) {
+                Icon(Icons.Rounded.Edit, "Edit daily limit", Modifier.size(17.dp), tint = Frost)
+                Spacer(Modifier.width(6.dp))
+                Text("Daily limit", color = Frost, style = MaterialTheme.typography.labelSmall)
             }
         }
-
         Spacer(Modifier.height(8.dp))
-        Row(
-            Modifier.fillMaxWidth().background(Mint.copy(alpha = .22f), RoundedCornerShape(14.dp)).padding(15.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("NOTE", style = MaterialTheme.typography.labelSmall, color = Frost)
-            Spacer(Modifier.width(12.dp))
-            Text(
-                coach ?: MotivationEngine.message(reels, target, streak),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.weight(1f)
-            )
+        BoardRow {
+            TurnTile("Today's\nReels", "$animatedReels", com.doomly.app.R.drawable.board_phone,
+                Modifier.weight(1f).fillMaxHeight(), Peach)
+            TileDivider()
+            TurnTile("Daily\nlimit", "$target", com.doomly.app.R.drawable.board_flag,
+                Modifier.weight(1f).fillMaxHeight(), onClick = { goalText = target.toString(); editGoal = true })
+            TileDivider()
+            TurnTile("Limit\nused", "$percent%", com.doomly.app.R.drawable.board_clock,
+                Modifier.weight(1f).fillMaxHeight())
         }
-
-        Spacer(Modifier.height(18.dp))
+        BoardConnector(true)
+        BoardRow {
+            TurnTile("Current\nstreak", "$streak days", com.doomly.app.R.drawable.board_tree,
+                Modifier.weight(1f).fillMaxHeight())
+            TileDivider()
+            TurnTile("Remaining\ntoday", "${(target - reels).coerceAtLeast(0)}", com.doomly.app.R.drawable.board_coffee,
+                Modifier.weight(1f).fillMaxHeight(), Aqua)
+            TileDivider()
+            TurnTile("Your\nlevel", "${MotivationEngine.level(total)}", com.doomly.app.R.drawable.board_trophy,
+                Modifier.weight(1f).fillMaxHeight())
+        }
+        BoardConnector(false)
+        BoardRow {
+            TurnTile("Lifetime\nReels", "$total", com.doomly.app.R.drawable.board_pawn,
+                Modifier.weight(1f).fillMaxHeight(), Violet)
+            TileDivider()
+            TurnTile("Next\nmilestone", "${reels % 25}/25", com.doomly.app.R.drawable.board_trophy,
+                Modifier.weight(1f).fillMaxHeight())
+            TileDivider()
+            TurnTile("Take a\nbreather", "You got this", com.doomly.app.R.drawable.board_coffee,
+                Modifier.weight(1f).fillMaxHeight(), Peach)
+        }
+        Spacer(Modifier.height(14.dp))
+        Text(coach ?: MotivationEngine.message(reels, target, streak),
+            style = MaterialTheme.typography.bodySmall, color = Muted)
+        Spacer(Modifier.height(22.dp))
         Button(
             onClick = {
                 CloudSyncScheduler.scheduleSync(context)
                 (context.findActivity() as? MainActivity)?.openInstagram()
             },
-            modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
-            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+            shape = RoundedCornerShape(7.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Frost, contentColor = Void)
         ) {
-            Text(if (progress >= 1f) "Keep scrolling anyway" else "Open Reels", fontWeight = FontWeight.Medium)
+            Text(if (progress >= 1f) "Keep scrolling anyway" else "Open Reels", fontWeight = FontWeight.Bold)
             Spacer(Modifier.width(8.dp))
             Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, modifier = Modifier.size(18.dp))
         }
-        Spacer(Modifier.height(28.dp))
-    }
-}
-
-@Composable
-private fun DashboardMetric(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(modifier.background(Panel, RoundedCornerShape(14.dp)).padding(14.dp)) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Muted)
-        Spacer(Modifier.height(12.dp))
-        Text(value, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+        Spacer(Modifier.height(24.dp))
     }
 }
 
@@ -187,8 +153,6 @@ private fun GoalDialog(value: String, onValue: (String) -> Unit, onSave: () -> U
     )
 }
 
-private fun milestoneTitle(reels: Int) = if (reels > 0 && reels % 25 == 0) "Milestone unlocked" else "The tiny thumb marathon"
-private fun milestoneCopy(reels: Int) = if (reels > 0 && reels % 25 == 0) "Twenty-five down. Hydrate the thumb." else "${25 - reels % 25} more to your next ridiculous achievement."
 private fun quietCallback() = object : ResultCallback<Void> {
     override fun onSuccess(value: Void?) = Unit
     override fun onError(message: String) = Unit

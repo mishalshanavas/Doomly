@@ -1,5 +1,5 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Legacy theme — OLED black -->
+    <!-- Legacy surfaces match the white game board. -->
     <style name="Theme.Doomly" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/doom_primary</item>
         <item name="colorPrimaryVariant">@color/doom_primary</item>
@@ -11,14 +11,14 @@
         <item name="android:fontFamily">sans-serif</item>
         <item name="android:navigationBarColor">@color/doom_bg</item>
         <item name="android:statusBarColor">@color/doom_bg</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
-    <!-- Compose theme — OLED black background, transparent bars -->
+    <!-- Launch window matches Compose to prevent a dark flash. -->
     <style name="Theme.Doomly.Compose" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/doom_bg</item>
         <item name="android:statusBarColor">@color/doom_bg</item>
         <item name="android:navigationBarColor">@color/doom_bg</item>
-        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

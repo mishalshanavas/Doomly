@@ -7,7 +7,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 private val Sans = FontFamily.SansSerif
-private val Editorial = FontFamily.Serif
+private val Editorial = FontFamily.SansSerif
 private fun sans(weight: FontWeight, size: Int, line: Int, spacing: Float = 0f) =
     TextStyle(fontFamily = Sans, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp, letterSpacing = spacing.sp)
 private fun editorial(weight: FontWeight, size: Int, line: Int, spacing: Float = 0f) =
@@ -16,9 +16,9 @@ private fun editorial(weight: FontWeight, size: Int, line: Int, spacing: Float =
 val DoomlyTypography = Typography(
     displayLarge = sans(FontWeight.Normal, 54, 58, -1.8f),
     displayMedium = sans(FontWeight.Normal, 40, 44, -1.1f),
-    headlineLarge = editorial(FontWeight.Normal, 32, 38, -.6f),
-    headlineMedium = editorial(FontWeight.Normal, 26, 32, -.3f),
-    headlineSmall = editorial(FontWeight.Normal, 21, 27),
+    headlineLarge = editorial(FontWeight.Black, 30, 36, -1.2f),
+    headlineMedium = editorial(FontWeight.Black, 26, 32, -.8f),
+    headlineSmall = editorial(FontWeight.Black, 21, 27),
     titleLarge = sans(FontWeight.Medium, 19, 25, -.2f),
     titleMedium = sans(FontWeight.Medium, 15, 21),
     titleSmall = sans(FontWeight.Medium, 13, 18),

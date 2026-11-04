@@ -3,7 +3,7 @@
 
     <style name="Widget.Doomly.Card" parent="Widget.MaterialComponents.CardView">
         <item name="cardBackgroundColor">@color/doom_surface</item>
-        <item name="cardCornerRadius">16dp</item>
+        <item name="cardCornerRadius">7dp</item>
         <item name="strokeColor">@color/doom_border</item>
         <item name="strokeWidth">1dp</item>
         <item name="cardUseCompatPadding">false</item>
@@ -26,7 +26,7 @@
     <style name="Widget.Doomly.Button" parent="Widget.MaterialComponents.Button">
         <item name="android:textAllCaps">false</item>
         <item name="android:textSize">14sp</item>
-        <item name="cornerRadius">14dp</item>
+        <item name="cornerRadius">7dp</item>
         <item name="android:minHeight">54dp</item>
         <item name="android:insetLeft">0dp</item>
         <item name="android:insetRight">0dp</item>

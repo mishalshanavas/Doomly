@@ -32,7 +32,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.doomly.app.*
 import com.doomly.app.data.AuthRepository
-import com.doomly.app.ui.components.DottedOrbit
+import com.doomly.app.ui.components.BoardArt
+import com.doomly.app.ui.components.TurnHeader
+import com.doomly.app.ui.components.PremiumCard
 import com.doomly.app.ui.components.StatusDot
 import com.doomly.app.ui.theme.*
 
@@ -82,10 +84,18 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(26.dp))
-        Text("Doomly", style = MaterialTheme.typography.headlineMedium)
+        TurnHeader("Hello, player.")
         Spacer(Modifier.height(3.dp))
-        Text("Reel tracking, with suspiciously good posture.", style = MaterialTheme.typography.bodySmall, color = Muted, textAlign = TextAlign.Center)
-        DottedOrbit(completed / 3f, Modifier.fillMaxWidth().height(170.dp), "Setup progress")
+        Text("Welcome to Doomly. Make every scroll count.", style = MaterialTheme.typography.bodySmall, color = Muted, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(22.dp))
+        Row(Modifier.fillMaxWidth().height(112.dp), Arrangement.Center, Alignment.CenterVertically) {
+            BoardArt(com.doomly.app.R.drawable.board_flag, Modifier.weight(1f).size(64.dp))
+            Text("· · ·", color = Muted, modifier = Modifier.padding(horizontal = 6.dp))
+            BoardArt(com.doomly.app.R.drawable.board_pawn, Modifier.weight(1f).size(78.dp))
+            Text("· · ·", color = Muted, modifier = Modifier.padding(horizontal = 6.dp))
+            BoardArt(com.doomly.app.R.drawable.board_trophy, Modifier.weight(1f).size(64.dp))
+        }
+        Spacer(Modifier.height(16.dp))
 
         Text("Three quick essentials", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         Spacer(Modifier.height(5.dp))
@@ -97,7 +107,7 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
             Text("$completed OF 3", style = MaterialTheme.typography.labelSmall, color = Muted)
         }
         Spacer(Modifier.height(8.dp))
-        Column(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(14.dp)).padding(horizontal = 15.dp)) {
+        PremiumCard(Modifier.fillMaxWidth()) {
             SetupRow(Icons.Rounded.Visibility, "Recognize Reels", "Reads visible Instagram UI locally to identify Reels.", accessibilityReady)
             HorizontalDivider(color = Hairline)
             SetupRow(Icons.Rounded.PersonOutline, "Save your score", "Sign in for cloud sync and the daily league.", signedIn)
@@ -113,7 +123,7 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
         Button(
             onClick = ::continueSetup,
             modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(7.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Frost, contentColor = Void)
         ) {
             Text(nextLabel(accessibilityReady, signedIn))
@@ -130,7 +140,7 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
             },
             enabled = !notificationGranted,
             modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-            shape = RoundedCornerShape(14.dp)
+            shape = RoundedCornerShape(7.dp)
         ) {
             Icon(Icons.Rounded.NotificationsNone, null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))

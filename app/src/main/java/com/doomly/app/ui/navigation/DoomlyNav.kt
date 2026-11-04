@@ -3,7 +3,12 @@ package com.doomly.app.ui.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -63,7 +68,7 @@ fun DoomlyNav(resumeCount: Int = 0) {
                 tonalElevation = 0.dp
             ) {
                 listOf(
-                    Triple(Route.HOME, Icons.Rounded.GridView, "Dashboard"),
+                    Triple(Route.HOME, Icons.Rounded.Home, "Today"),
                     Triple(Route.BOARD, Icons.Rounded.EmojiEvents, "League"),
                     Triple(Route.PROFILE, Icons.Rounded.Person, "Profile")
                 ).forEach { (destination, icon, label) ->
@@ -73,9 +78,13 @@ fun DoomlyNav(resumeCount: Int = 0) {
                             popUpTo(nav.graph.findStartDestination().id) { saveState = true }
                             launchSingleTop = true; restoreState = true
                         } },
-                        icon = { Icon(icon, label) }, label = { Text(label) },
+                        icon = {
+                            Box(Modifier.size(38.dp).background(if (route == destination) Mint else Void, RoundedCornerShape(7.dp)), Alignment.Center) {
+                                Icon(icon, label, Modifier.size(23.dp))
+                            }
+                        }, label = { Text(label) },
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Frost, selectedTextColor = Frost, indicatorColor = Panel,
+                            selectedIconColor = Frost, selectedTextColor = Frost, indicatorColor = Void,
                             unselectedIconColor = Muted, unselectedTextColor = Muted
                         )
                     )

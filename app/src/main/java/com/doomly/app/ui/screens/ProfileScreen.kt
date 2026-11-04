@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Logout
-import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Refresh
@@ -31,7 +30,8 @@ import com.doomly.app.BuildConfig
 import com.doomly.app.DoomStatsStore
 import com.doomly.app.ProfileViewModel
 import com.doomly.app.data.AuthRepository
-import com.doomly.app.ui.components.PageHeader
+import com.doomly.app.ui.components.TurnHeader
+import com.doomly.app.ui.components.BoardArt
 import com.doomly.app.ui.components.PremiumCard
 import com.doomly.app.ui.components.DailyUsageHeatmap
 import com.doomly.app.ui.theme.*
@@ -93,11 +93,11 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(26.dp))
-        PageHeader("Profile", "The person behind the highly trained thumb.")
+        TurnHeader("Your player card", "Every little turn adds up.")
         Spacer(Modifier.height(26.dp))
 
-        Box(Modifier.size(82.dp).background(Frost, CircleShape), Alignment.Center) {
-            Text(initials, style = MaterialTheme.typography.headlineMedium, color = Void)
+        Box(Modifier.size(82.dp).background(Mint, RoundedCornerShape(7.dp)), Alignment.Center) {
+            Text(initials, style = MaterialTheme.typography.headlineMedium, color = Frost)
         }
         Spacer(Modifier.height(12.dp))
         Text(name, style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
@@ -111,7 +111,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
                     Spacer(Modifier.height(5.dp))
                     Text(total, style = MaterialTheme.typography.displayMedium)
                 }
-                Icon(Icons.Rounded.AutoAwesome, null, tint = Frost, modifier = Modifier.padding(bottom = 7.dp))
+                BoardArt(com.doomly.app.R.drawable.board_trophy, Modifier.size(54.dp))
             }
             Spacer(Modifier.height(6.dp))
             Text("A number best enjoyed without context.", style = MaterialTheme.typography.bodySmall, color = Muted)
@@ -148,7 +148,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         Text("ACCOUNT", style = MaterialTheme.typography.labelSmall, color = Muted, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(8.dp))
         Row(
-            Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(14.dp)).padding(15.dp),
+            Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(7.dp)).padding(15.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(Modifier.size(34.dp).background(Frost, CircleShape), Alignment.Center) {
@@ -167,7 +167,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
             OutlinedButton(
                 onClick = { confirmSignOut = true },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(7.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Danger)
             ) {
                 Icon(Icons.AutoMirrored.Rounded.Logout, null, modifier = Modifier.size(18.dp))
@@ -236,7 +236,7 @@ private fun UpdateCard(
         }
     }
 
-    Column(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(14.dp)).padding(15.dp)) {
+    Column(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(7.dp)).padding(15.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(36.dp).background(PanelRaised, CircleShape), Alignment.Center) {
                 Icon(
@@ -257,7 +257,7 @@ private fun UpdateCard(
             onClick = action,
             enabled = enabled,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(7.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Frost, contentColor = Void)
         ) {
             Icon(
@@ -273,7 +273,7 @@ private fun UpdateCard(
 
 @Composable
 private fun ProfileStat(value: String, label: String, modifier: Modifier = Modifier) {
-    Column(modifier.background(Panel, RoundedCornerShape(14.dp)).padding(13.dp)) {
+    Column(modifier.background(Panel, RoundedCornerShape(7.dp)).padding(13.dp)) {
         Text(value, style = MaterialTheme.typography.titleLarge, maxLines = 1)
         Spacer(Modifier.height(5.dp))
         Text(label, style = MaterialTheme.typography.labelSmall, color = Muted, maxLines = 1)

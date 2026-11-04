@@ -20,7 +20,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.doomly.app.LeagueViewModel
 import com.doomly.app.data.LeaderboardRepository
-import com.doomly.app.ui.components.PageHeader
+import com.doomly.app.ui.components.TurnHeader
+import com.doomly.app.ui.components.BoardArt
 import com.doomly.app.ui.components.PremiumCard
 import com.doomly.app.ui.theme.*
 
@@ -41,7 +42,7 @@ fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel()) {
 
     Column(Modifier.fillMaxSize().background(Void).padding(horizontal = 24.dp)) {
         Spacer(Modifier.height(26.dp))
-        PageHeader("The league", "A very serious ranking of unserious scrolling.")
+        TurnHeader("The league", "Same board. A little friendly competition.")
         Spacer(Modifier.height(20.dp))
         when {
             loading -> Box(Modifier.fillMaxSize(), Alignment.Center) {
@@ -71,8 +72,8 @@ fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel()) {
 private fun LeaderSummary(leader: LeaderboardRepository.LeaderboardEntry) {
     PremiumCard(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).background(Frost, CircleShape), Alignment.Center) {
-                Icon(Icons.Rounded.EmojiEvents, null, tint = Void, modifier = Modifier.size(22.dp))
+            Box(Modifier.size(48.dp).background(Peach, CircleShape), Alignment.Center) {
+                BoardArt(com.doomly.app.R.drawable.board_trophy, Modifier.size(40.dp))
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
@@ -90,7 +91,7 @@ private fun LeaderSummary(leader: LeaderboardRepository.LeaderboardEntry) {
 @Composable
 private fun LeaderRow(entry: LeaderboardRepository.LeaderboardEntry) {
     Row(
-        Modifier.fillMaxWidth().background(if (entry.rank <= 3) Panel else Void, RoundedCornerShape(14.dp))
+        Modifier.fillMaxWidth().background(if (entry.rank <= 3) Panel else Void, RoundedCornerShape(7.dp))
             .padding(horizontal = 12.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -116,8 +117,8 @@ private fun LeaderRow(entry: LeaderboardRepository.LeaderboardEntry) {
 private fun EmptyState(title: String, body: String) {
     Box(Modifier.fillMaxSize(), Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(30.dp)) {
-            Box(Modifier.size(56.dp).background(Panel, CircleShape), Alignment.Center) {
-                Icon(Icons.Rounded.EmojiEvents, null, tint = Frost)
+            Box(Modifier.size(80.dp).background(Peach, CircleShape), Alignment.Center) {
+                BoardArt(com.doomly.app.R.drawable.board_trophy, Modifier.size(64.dp))
             }
             Spacer(Modifier.height(14.dp))
             Text(title, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
