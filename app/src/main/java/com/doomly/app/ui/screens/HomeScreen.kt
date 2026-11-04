@@ -2,11 +2,7 @@ package com.doomly.app.ui.screens
 
 import android.content.Context
 import android.content.ContextWrapper
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.keyframes
@@ -19,9 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.doomly.app.*
@@ -42,7 +35,6 @@ import com.doomly.app.ui.theme.*
 fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
     val context = LocalContext.current
     val snapshot by viewModel.getSnapshot().observeAsState()
-    val coach by viewModel.getCoachMessage().observeAsState()
     var editGoal by rememberSaveable { mutableStateOf(false) }
     var goalFeedback by rememberSaveable { mutableStateOf<String?>(null) }
     var goalText by rememberSaveable { mutableStateOf("") }
@@ -50,12 +42,9 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
     com.doomly.app.ui.components.StatsRefreshEffect { viewModel.refresh() }
 
     val reels = snapshot?.todayReels ?: 0
-    val total = snapshot?.totalReels ?: 0
     val streak = snapshot?.streak ?: 0
     val target = snapshot?.dailyTarget?.coerceAtLeast(1) ?: DoomStatsStore.DEFAULT_DAILY_TARGET
-    val progress = (reels.toFloat() / target).coerceIn(0f, 1f)
     val animatedReels by animateIntAsState(reels, tween(450), label = "reels")
-    val animatedProgress by animateFloatAsState(progress, tween(700), label = "progress")
 
     val dayKey = LocalDate.now().toString()
     var lastCount by rememberSaveable(dayKey) { mutableStateOf<Int?>(null) }
@@ -96,10 +85,6 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
         onDismiss = { editGoal = false }
     )
 
-    val reelInteraction = remember { MutableInteractionSource() }
-    val reelPressed by reelInteraction.collectIsPressedAsState()
-    val buttonScale by animateFloatAsState(if (reelPressed) .97f else 1f,
-        spring(dampingRatio = .65f, stiffness = 700f), label = "Reels button press")
     LaunchedEffect(resumeCount) { viewModel.refresh() }
     val history = DoomStatsStore.dailyHistory(context)
     Column(Modifier.fillMaxSize().background(Void).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
@@ -131,49 +116,25 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
             }
         }
         HorizontalDivider(color = Hairline)
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            HomeMetric("Next milestone", "${MotivationEngine.nextMilestone(reels, target)}", Modifier.weight(1f).fillMaxHeight())
-            Box(Modifier.fillMaxHeight().width(1.dp).background(Hairline))
-            HomeMetric("Level", "${MotivationEngine.level(total)}", Modifier.weight(1f).fillMaxHeight(), inset = true)
+        Row(Modifier.fillMaxWidth().padding(vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Next milestone", style = MaterialTheme.typography.bodySmall, color = Muted, modifier = Modifier.weight(1f))
+            Text("${MotivationEngine.nextMilestone(reels, target)} Reels", style = MaterialTheme.typography.bodySmall, color = Frost)
         }
-        HorizontalDivider(color = Hairline)
-        Spacer(Modifier.height(18.dp))
-        LinearProgressIndicator(progress = { animatedProgress }, modifier = Modifier.fillMaxWidth().height(3.dp),
-            color = Mint, trackColor = PanelRaised)
-        Spacer(Modifier.height(8.dp))
-        Text(if (reels >= target) "Daily goal reached." else "${target - reels} Reels to today's goal.",
-            style = MaterialTheme.typography.bodySmall, color = Muted)
         MilestonePop(milestone, celebrationEvent)
         goalFeedback?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Muted,
             modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }) }
-        Spacer(Modifier.height(12.dp))
-        Button(
-            onClick = {
-                CloudSyncScheduler.scheduleSync(context)
-                (context.findActivity() as? MainActivity)?.openInstagram()
-            },
-            interactionSource = reelInteraction,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).graphicsLayer {
-                scaleX = buttonScale; scaleY = buttonScale
-            },
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Frost, contentColor = Void)
-        ) {
-            Text("One more Reel", fontWeight = FontWeight.Medium)
-            Spacer(Modifier.width(8.dp))
-            Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, modifier = Modifier.size(18.dp))
-        }
-        Spacer(Modifier.height(18.dp))
-        Text(coach ?: MotivationEngine.message(reels, target, streak),
-            style = MaterialTheme.typography.bodySmall, color = Muted)
+        MinorDetour(onOpenInstagram = {
+            CloudSyncScheduler.scheduleSync(context)
+            (context.findActivity() as? MainActivity)?.openInstagram()
+        })
         Spacer(Modifier.height(24.dp))
     }
 }
 
 @Composable
 private fun HomeMetric(label: String, value: String, modifier: Modifier = Modifier,
-                       scale: Float = 1f, primary: Boolean = false, inset: Boolean = false) {
-    Column(modifier.padding(start = if (inset) 24.dp else 0.dp, top = 22.dp, bottom = 22.dp)) {
+                       scale: Float = 1f, primary: Boolean = false) {
+    Column(modifier.padding(top = 22.dp, bottom = 22.dp)) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = Muted)
         Spacer(Modifier.height(12.dp))
         Text(value, style = if (primary) MaterialTheme.typography.displayMedium else MaterialTheme.typography.headlineLarge,
@@ -192,7 +153,7 @@ private fun GoalDialog(value: String, onValue: (String) -> Unit, onSave: () -> U
                 onValueChange = { onValue(it.filter(Char::isDigit).take(5)) },
                 label = { Text("Reels per day") },
                 supportingText = { Text(if (value.isNotEmpty() && value.toIntOrNull() !in 1..20_000)
-                    "Enter a number from 1 to 20,000." else "A tiny ambition for your very busy thumb.") },
+                    "Enter a number from 1 to 20,000." else "You can change this anytime.") },
                 isError = value.isNotEmpty() && value.toIntOrNull() !in 1..20_000,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true

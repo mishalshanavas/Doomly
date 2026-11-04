@@ -4,9 +4,9 @@ The palette is white, near-black, and sparse green accents, originally inspired 
 the app preview at https://myturn.kr/ (inspected November 4, 2026). Doomly uses its
 own text, data, local geometric avatars, and layouts.
 
-- Home places a plain streak indicator next to the date/title. The week strip and a flat 2x2 grid
-  show today's Reels, the editable goal, next milestone, and level without accordions
-  or colored cards. Thin rules define the grid; today's count has the strongest emphasis.
+- Home places a plain streak indicator next to the date/title. The week strip and a flat statistics row
+  show today's Reels and the editable goal without accordions
+  or colored cards. A small milestone row follows; today's count has the strongest emphasis.
   The Reels action stays prominent. No pawn mascot appears on Home.
 - Profile shows a deterministic SHA-256-based mirrored avatar, personal statistics,
   and 30 days of activity directly, without a Usage history heading or disclosure.
@@ -35,3 +35,8 @@ help orient the day. Routine update status is a small row, while actionable upda
 retain their controls. Profile statistics and history are unboxed. Podium steps are
 shallow and neutral with a subdued green winner. Green is reserved for activity,
 progress, avatars, and selection rather than full-width navigation fills.
+
+Level progression and generic goal-chasing copy have been removed from Home.
+The Instagram action is integrated into “A minor detour”: a thin conceptual route
+from “The plan” to the inline “Open Instagram” destination. Pressing the action
+briefly highlights the route; there is no idle animation or separate oversized CTA.
