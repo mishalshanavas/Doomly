@@ -17,10 +17,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.doomly.app.LeagueViewModel
 import com.doomly.app.data.LeaderboardRepository
 import com.doomly.app.ui.components.SignInButton
-import com.doomly.app.ui.components.TurnHeader
+import com.doomly.app.ui.components.PageHeader
 import com.doomly.app.ui.components.BoardArt
 import com.doomly.app.ui.components.GeneratedAvatar
-import androidx.compose.foundation.border
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -39,7 +38,7 @@ fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel(), resumeCount: Int
 
     Column(Modifier.fillMaxSize().background(Void).padding(horizontal = 24.dp)) {
         Spacer(Modifier.height(26.dp))
-        TurnHeader("The league", "Same board. A little friendly competition.")
+        PageHeader("League")
         Spacer(Modifier.height(20.dp))
         if (signedIn && entries.isNotEmpty() && (errorTitle != null || loading)) {
             Text(if (loading) "Updating rankings…" else "Showing earlier rankings · refresh failed", style = MaterialTheme.typography.bodySmall, color = Muted)
@@ -71,7 +70,7 @@ fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel(), resumeCount: Int
                     Spacer(Modifier.height(20.dp))
                     TextButton(onClick = { viewModel.refresh() }, enabled = !loading) { Text("Refresh rankings") }
                     if (entries.size > 3) {
-                        Text("THE REST OF THE LEAGUE · REELS", style = MaterialTheme.typography.labelSmall, color = Muted)
+                        Text("Rankings · Reels", style = MaterialTheme.typography.labelSmall, color = Muted)
                         Spacer(Modifier.height(2.dp))
                     }
                 }
@@ -88,21 +87,17 @@ private fun LeaguePodium(entries: List<LeaderboardRepository.LeaderboardEntry>) 
     val places = listOfNotNull(byRank[2], byRank[1], byRank[3])
     val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
     Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text("THE THUMB CHAMPIONS", style = MaterialTheme.typography.labelSmall, color = Muted)
+        Text("Today’s leaders", style = MaterialTheme.typography.labelSmall, color = Muted)
         Spacer(Modifier.height(20.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
             places.forEach { entry ->
                 val winner = entry.rank == 1
-                val color = when (entry.rank) { 1 -> Mint; 2 -> Aqua; else -> Peach }
-                val podiumHeight = when (entry.rank) { 1 -> 128; 2 -> 106; else -> 88 }
+                val color = if (winner) Mint.copy(alpha = .12f) else Panel
+                val podiumHeight = when (entry.rank) { 1 -> 100; 2 -> 80; else -> 64 }
                 Column(Modifier.weight(1f).semantics(mergeDescendants = true) {
                     contentDescription = "Rank ${entry.rank}, ${entry.displayName}, ${entry.reels} Reels"
                 }, horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (winner) {
-                        BoardArt(com.doomly.app.R.drawable.board_trophy, Modifier.size(30.dp))
-                        Spacer(Modifier.height(8.dp))
-                    }
-                    GeneratedAvatar(entry.uid.ifBlank { entry.displayName }, Modifier.size(if (winner) 64.dp else 50.dp))
+                    GeneratedAvatar(entry.uid.ifBlank { entry.displayName }, Modifier.size(if (winner) 48.dp else 42.dp))
                     Spacer(Modifier.height(10.dp))
                     Text(entry.displayName.ifBlank { "Doomly player" },
                         style = MaterialTheme.typography.titleSmall, color = Frost,
@@ -110,10 +105,10 @@ private fun LeaguePodium(entries: List<LeaderboardRepository.LeaderboardEntry>) 
                         modifier = Modifier.fillMaxWidth().heightIn(min = (40 * fontScale).dp))
                     Spacer(Modifier.height(8.dp))
                     Column(Modifier.fillMaxWidth().background(color, RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
-                        .border(1.dp, Hairline.copy(alpha = .45f), RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+
                         .heightIn(min = (podiumHeight * fontScale).dp).padding(horizontal = 6.dp, vertical = 10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                        Text("${entry.rank}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black, color = Frost)
+                        Text("${entry.rank}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Medium, color = Frost)
                         Spacer(Modifier.height(3.dp))
                         Text("${entry.reels}", style = MaterialTheme.typography.titleSmall, color = Frost)
                         Text("REELS", style = MaterialTheme.typography.labelSmall, color = Muted)

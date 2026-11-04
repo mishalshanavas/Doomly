@@ -15,7 +15,6 @@ import java.time.LocalDate
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -23,21 +22,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.doomly.app.*
 import com.doomly.app.ui.components.*
@@ -111,47 +106,42 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
         Spacer(Modifier.height(26.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) { TurnHeader("Today") }
-            Row(Modifier.background(Mint.copy(alpha = .12f), RoundedCornerShape(10.dp))
-                .padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.LocalFireDepartment, null, tint = Frost, modifier = Modifier.size(21.dp))
-                Spacer(Modifier.width(6.dp))
-                Column {
-                    Text("$streak ${if (streak == 1) "day" else "days"}", style = MaterialTheme.typography.titleSmall, color = Frost)
-                    Text("STREAK", style = MaterialTheme.typography.labelSmall, color = Muted)
-                }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.LocalFireDepartment, null, tint = Muted, modifier = Modifier.size(17.dp))
+                Spacer(Modifier.width(5.dp))
+                Text("$streak-day streak", style = MaterialTheme.typography.bodySmall, color = Frost)
             }
         }
         Spacer(Modifier.height(24.dp))
         WeekStrip(history, reels)
         Spacer(Modifier.height(24.dp))
         TrackingStatus(resumeCount)
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            HomeMetric("Reels today", "$animatedReels", "Thumb work logged", Peach,
-                Modifier.weight(1f).fillMaxHeight(), scale = countPop.value)
-            Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(10.dp))
-                .background(Aqua).border(1.dp, Hairline.copy(alpha = .45f), RoundedCornerShape(10.dp)).padding(16.dp)) {
+        HorizontalDivider(color = Hairline)
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            HomeMetric("Reels today", "$animatedReels", Modifier.weight(1f).fillMaxHeight(),
+                scale = countPop.value, primary = true)
+            Box(Modifier.fillMaxHeight().width(1.dp).background(Hairline))
+            Column(Modifier.weight(1f).padding(start = 24.dp, top = 22.dp, bottom = 12.dp)) {
                 Text("Daily goal", style = MaterialTheme.typography.bodySmall, color = Muted)
                 Spacer(Modifier.height(12.dp))
                 Text("$target", style = MaterialTheme.typography.headlineLarge, color = Frost)
                 TextButton(onClick = { goalText = target.toString(); editGoal = true }, contentPadding = PaddingValues(0.dp)) {
-                    Icon(Icons.Rounded.Edit, null, Modifier.size(14.dp), tint = Frost)
-                    Spacer(Modifier.width(6.dp))
-                    Text("Edit goal", style = MaterialTheme.typography.labelMedium, color = Frost)
+                    Text("Edit", style = MaterialTheme.typography.labelMedium, color = Muted)
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            HomeMetric("Next milestone", "${MotivationEngine.nextMilestone(reels, target)}", "Reels", Void,
-                Modifier.weight(1f).fillMaxHeight())
-            HomeMetric("Your level", "${MotivationEngine.level(total)}", "Professional procrastinator", Violet,
-                Modifier.weight(1f).fillMaxHeight())
+        HorizontalDivider(color = Hairline)
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            HomeMetric("Next milestone", "${MotivationEngine.nextMilestone(reels, target)}", Modifier.weight(1f).fillMaxHeight())
+            Box(Modifier.fillMaxHeight().width(1.dp).background(Hairline))
+            HomeMetric("Level", "${MotivationEngine.level(total)}", Modifier.weight(1f).fillMaxHeight(), inset = true)
         }
+        HorizontalDivider(color = Hairline)
         Spacer(Modifier.height(18.dp))
-        LinearProgressIndicator(progress = { animatedProgress }, modifier = Modifier.fillMaxWidth().height(5.dp),
+        LinearProgressIndicator(progress = { animatedProgress }, modifier = Modifier.fillMaxWidth().height(3.dp),
             color = Mint, trackColor = PanelRaised)
         Spacer(Modifier.height(8.dp))
-        Text(if (reels >= target) "Goal crushed. Extremely busy doing nothing." else "${target - reels} Reels to today's goal.",
+        Text(if (reels >= target) "Daily goal reached." else "${target - reels} Reels to today's goal.",
             style = MaterialTheme.typography.bodySmall, color = Muted)
         MilestonePop(milestone, celebrationEvent)
         goalFeedback?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Muted,
@@ -166,10 +156,10 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
             modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).graphicsLayer {
                 scaleX = buttonScale; scaleY = buttonScale
             },
-            shape = RoundedCornerShape(7.dp),
+            shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Frost, contentColor = Void)
         ) {
-            Text("One more Reel", fontWeight = FontWeight.Bold)
+            Text("One more Reel", fontWeight = FontWeight.Medium)
             Spacer(Modifier.width(8.dp))
             Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, modifier = Modifier.size(18.dp))
         }
@@ -181,16 +171,13 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
 }
 
 @Composable
-private fun HomeMetric(label: String, value: String, caption: String, tint: Color,
-                       modifier: Modifier = Modifier, scale: Float = 1f) {
-    Column(modifier.clip(RoundedCornerShape(10.dp)).background(tint)
-        .border(1.dp, Hairline.copy(alpha = .45f), RoundedCornerShape(10.dp)).padding(16.dp)) {
+private fun HomeMetric(label: String, value: String, modifier: Modifier = Modifier,
+                       scale: Float = 1f, primary: Boolean = false, inset: Boolean = false) {
+    Column(modifier.padding(start = if (inset) 24.dp else 0.dp, top = 22.dp, bottom = 22.dp)) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = Muted)
         Spacer(Modifier.height(12.dp))
-        Text(value, style = MaterialTheme.typography.headlineLarge, color = Frost,
-            modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale })
-        Spacer(Modifier.height(8.dp))
-        Text(caption, style = MaterialTheme.typography.bodySmall, color = Muted)
+        Text(value, style = if (primary) MaterialTheme.typography.displayMedium else MaterialTheme.typography.headlineLarge,
+            color = Frost, modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale })
     }
 }
 

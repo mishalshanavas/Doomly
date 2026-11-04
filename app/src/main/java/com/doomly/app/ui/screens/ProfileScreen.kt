@@ -31,7 +31,7 @@ import com.doomly.app.ui.components.SignInButton
 import com.doomly.app.ui.components.NotificationSettings
 import com.doomly.app.CloudSyncScheduler
 import com.doomly.app.ui.components.GeneratedAvatar
-import com.doomly.app.ui.components.TurnHeader
+import com.doomly.app.ui.components.PageHeader
 import com.doomly.app.ui.components.PremiumCard
 import com.doomly.app.ui.components.DailyUsageHeatmap
 import com.doomly.app.ui.theme.*
@@ -95,11 +95,11 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(26.dp))
-        TurnHeader("Your profile")
+        PageHeader("Profile")
         Spacer(Modifier.height(26.dp))
 
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            GeneratedAvatar(avatarSeed, Modifier.size(76.dp))
+            GeneratedAvatar(avatarSeed, Modifier.size(52.dp))
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.titleLarge)
@@ -107,21 +107,21 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
                 Text(email, style = MaterialTheme.typography.bodySmall, color = Muted)
             }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(28.dp))
+        HorizontalDivider(color = Hairline)
 
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ProfileStat(total, "Lifetime Reels", Modifier.weight(1f))
             ProfileStat(streak, "Day streak", Modifier.weight(1f))
         }
-        Spacer(Modifier.height(10.dp))
+        HorizontalDivider(color = Hairline)
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ProfileStat(target.toString(), "Daily goal", Modifier.weight(1f))
             ProfileStat(best.toString(), "Most Reels in a day", Modifier.weight(1f))
         }
-        Spacer(Modifier.height(20.dp))
-        PremiumCard(Modifier.fillMaxWidth()) {
-            DailyUsageHeatmap(usageHistory, Modifier.fillMaxWidth())
-        }
+        HorizontalDivider(color = Hairline)
+        Spacer(Modifier.height(24.dp))
+        DailyUsageHeatmap(usageHistory, Modifier.fillMaxWidth())
         if (BuildConfig.ENABLE_GITHUB_UPDATES) {
             Spacer(Modifier.height(22.dp))
             UpdateCard(
@@ -173,6 +173,18 @@ private fun UpdateCard(
     onDownload: (com.doomly.app.update.GitHubRelease) -> Unit,
     onInstall: (UpdateState.ReadyToInstall) -> Unit
 ) {
+    if (state == UpdateState.UpToDate || state == UpdateState.Checking) {
+        HorizontalDivider(color = Hairline)
+        Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Doomly ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyMedium)
+                Text(if (state == UpdateState.Checking) "Checking for updates…" else "Up to date",
+                    style = MaterialTheme.typography.bodySmall, color = Muted)
+            }
+            TextButton(onClick = onCheck, enabled = state != UpdateState.Checking) { Text("Check") }
+        }
+        return
+    }
     val title: String
     val body: String
     val button: String
@@ -260,7 +272,7 @@ private fun UpdateCard(
 
 @Composable
 private fun ProfileStat(value: String, label: String, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxHeight().background(Panel, RoundedCornerShape(7.dp)).padding(16.dp)) {
+    Column(modifier.fillMaxHeight().padding(vertical = 18.dp)) {
         Text(value, style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(5.dp))
         Text(label, style = MaterialTheme.typography.bodySmall, color = Muted)

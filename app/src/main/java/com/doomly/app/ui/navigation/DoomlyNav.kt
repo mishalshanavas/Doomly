@@ -3,20 +3,17 @@ package com.doomly.app.ui.navigation
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.EmojiEvents
-import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
-import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -50,21 +47,19 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
         containerColor = Void,
         bottomBar = {
             if (ready && route != Route.PERMISSIONS) {
-                Box(Modifier.fillMaxWidth().background(Void).navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 10.dp)) {
-                    Surface(shape = RoundedCornerShape(20.dp), color = Void,
-                        border = BorderStroke(1.dp, Hairline.copy(alpha = .25f)), tonalElevation = 0.dp) {
-                        Row(Modifier.fillMaxWidth().selectableGroup().padding(5.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Box(Modifier.fillMaxWidth().background(Void).navigationBarsPadding()) {
+                    Column {
+                        HorizontalDivider(color = Hairline)
+                        Row(Modifier.fillMaxWidth().selectableGroup().padding(horizontal = 12.dp, vertical = 4.dp)) {
                             listOf(
-                                Triple(Route.HOME, Icons.Rounded.Home, "Today"),
-                                Triple(Route.BOARD, Icons.Rounded.EmojiEvents, "League"),
-                                Triple(Route.PROFILE, Icons.Rounded.Person, "Profile")
+                                Triple(Route.HOME, Icons.Outlined.Home, "Today"),
+                                Triple(Route.BOARD, Icons.Outlined.BarChart, "League"),
+                                Triple(Route.PROFILE, Icons.Outlined.PersonOutline, "Profile")
                             ).forEach { (destination, icon, label) ->
                                 val selected = route == destination
-                                val tabColor by animateColorAsState(if (selected) Mint else Color.Transparent,
+                                val tabColor by animateColorAsState(if (selected) Frost else Muted,
                                     tween(180), label = "Selected tab")
-                                Column(Modifier.weight(1f).clip(RoundedCornerShape(15.dp))
-                                    .background(tabColor)
+                                Column(Modifier.weight(1f)
                                     .selectable(selected = selected, role = Role.Tab, onClick = {
                                         nav.navigate(destination) {
                                             popUpTo(Route.HOME) { saveState = true }
@@ -74,11 +69,13 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
                                     }).heightIn(min = 56.dp).padding(horizontal = 6.dp, vertical = 8.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center) {
-                                    Icon(icon, null, Modifier.size(23.dp), tint = if (selected) Frost else Muted)
+                                    Icon(icon, null, Modifier.size(23.dp), tint = tabColor)
                                     Spacer(Modifier.height(3.dp))
                                     Text(label, style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (selected) Frost else Muted)
+                                        fontWeight = FontWeight.Medium,
+                                        color = tabColor)
+                                    Spacer(Modifier.height(4.dp))
+                                    Box(Modifier.size(3.dp).background(if (selected) Mint else Color.Transparent, androidx.compose.foundation.shape.CircleShape))
                                 }
                             }
                         }

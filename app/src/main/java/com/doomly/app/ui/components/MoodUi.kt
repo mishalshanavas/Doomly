@@ -1,7 +1,6 @@
 package com.doomly.app.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Arrangement
@@ -23,8 +22,7 @@ fun PremiumCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.
     Column(
         modifier
             .clip(RoundedCornerShape(7.dp))
-            .background(Void)
-            .border(1.dp, Hairline.copy(alpha = .8f), RoundedCornerShape(7.dp))
+            .background(Panel)
             .padding(16.dp),
         content = content
     )
@@ -34,7 +32,7 @@ fun PremiumCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.
 fun PageHeader(title: String, subtitle: String? = null, trailing: (@Composable () -> Unit)? = null) {
     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) {
         Column(Modifier.weight(1f)) {
-            Text(title.uppercase(), style = MaterialTheme.typography.headlineMedium, color = Frost)
+            Text(title, style = MaterialTheme.typography.headlineMedium, color = Frost)
             subtitle?.let {
                 Spacer(Modifier.height(2.dp))
                 Text(it, style = MaterialTheme.typography.bodySmall, color = Muted)

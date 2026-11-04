@@ -3,7 +3,6 @@ package com.doomly.app.ui.components
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -24,7 +23,7 @@ import java.util.Locale
 
 @Composable
 fun TurnHeader(title: String, subtitle: String? = null) {
-    Text(LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.getDefault())).uppercase(),
+    Text(LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault())),
         style = MaterialTheme.typography.labelSmall, color = Frost)
     Spacer(Modifier.height(5.dp))
     PageHeader(title, subtitle)
@@ -45,13 +44,12 @@ fun WeekStrip(history: Map<String, Int>, todayCount: Int) {
                 Text(if (current) "Today" else date.format(DateTimeFormatter.ofPattern("EEEEE")),
                     style = MaterialTheme.typography.labelSmall, color = if (current) Frost else Muted)
                 Spacer(Modifier.height(7.dp))
-                Box(Modifier.size(38.dp).border(if (current) 1.5.dp else 0.dp, if (current) Frost else Color.Transparent, CircleShape).padding(3.dp), Alignment.Center) {
-                    Box(Modifier.fillMaxSize().clip(CircleShape)
-                        .background(if (count > 0) Mint else Void)
-                        .border(1.dp, if (date <= today) Frost else PanelRaised, CircleShape), Alignment.Center) {
-                        Text("${date.dayOfMonth}", style = MaterialTheme.typography.bodyMedium, color = Frost)
-                    }
+                Box(Modifier.size(34.dp).clip(CircleShape).background(if (current) Frost else Color.Transparent), Alignment.Center) {
+                    Text("${date.dayOfMonth}", style = MaterialTheme.typography.bodyMedium,
+                        color = if (current) Void else if (date <= today) Frost else Muted)
                 }
+                Spacer(Modifier.height(5.dp))
+                Box(Modifier.size(3.dp).clip(CircleShape).background(if (count > 0) Mint else Color.Transparent))
             }
         }
     }

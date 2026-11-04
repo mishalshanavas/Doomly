@@ -8,7 +8,7 @@ import androidx.compose.ui.graphics.Color
 internal val LightVoid = Color(0xFFFFFFFF)
 internal val LightPanel = Color(0xFFF7F7F5)
 internal val LightPanelRaised = Color(0xFFF0F0ED)
-internal val LightHairline = Color(0xFF383838)
+internal val LightHairline = Color(0xFFE6E6E2)
 internal val LightFrost = Color(0xFF171717)
 internal val LightSmoke = Color(0xFF707070)
 internal val LightDanger = Color(0xFF9F3B36)
