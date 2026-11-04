@@ -27,3 +27,26 @@ All four Compose screens, the XML launch/legacy theme, and the admin page use th
 Validation: `bash gradlew :app:assembleGithubDebug :app:testGithubDebugUnitTest`.
 Visual review should include setup, populated/empty league, profile updates,
 goal editing, a small screen, and larger Android font settings.
+
+## Progressive disclosure
+
+The default Today screen shows one usage card, an editable daily limit, and the
+Reels action. Weekly activity, streak, level and milestones are behind “More
+details”. Profile history is collapsed initially. Routine update information is
+collapsed; actionable update states open automatically. The league starts with
+five players and offers “Show more players”. Setup presents only the next unmet
+requirement and one action, while preserving the full accessibility disclosure.
+Expandable sections announce their state and preserve it across recreation.
+Goal entry uses a number keyboard and validates the supported range before saving.
+
+## Playful motion
+
+Micro-interactions use Compose animation timing, including the Android animator
+scale setting. The mascot gives a short wiggle when tapped, the Reels button
+compresses while pressed, updated counts pop once, navigation colors ease, and
+details chevrons rotate. There are no perpetual attention-grabbing loops.
+
+Crossing a 25-Reel boundary after the first loaded snapshot triggers one small
+trophy burst and a short inline message. Initial data hydration and rotation do
+not replay the celebration. Multiple crossed milestones produce a single burst.
+The app uses “daily goal” language and playful encouragement to match its premise.

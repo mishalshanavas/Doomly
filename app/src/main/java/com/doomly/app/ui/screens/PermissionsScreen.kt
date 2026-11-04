@@ -97,22 +97,21 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
         }
         Spacer(Modifier.height(16.dp))
 
-        Text("Three quick essentials", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(5.dp))
-        Text("Complete these before entering Doomly. Each step explains what it enables.", style = MaterialTheme.typography.bodyMedium, color = Muted, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(20.dp))
-
-        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-            Text("REQUIRED SETUP", style = MaterialTheme.typography.labelSmall, color = Muted)
-            Text("$completed OF 3", style = MaterialTheme.typography.labelSmall, color = Muted)
-        }
+        Text("One step at a time", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
+        Text("$completed of 3 ready", style = MaterialTheme.typography.bodySmall, color = Muted)
+        Spacer(Modifier.height(20.dp))
         PremiumCard(Modifier.fillMaxWidth()) {
-            SetupRow(Icons.Rounded.Visibility, "Recognize Reels", "Reads visible Instagram UI locally to identify Reels.", accessibilityReady)
-            HorizontalDivider(color = Hairline)
-            SetupRow(Icons.Rounded.PersonOutline, "Save your score", "Sign in for cloud sync and the daily league.", signedIn)
-            HorizontalDivider(color = Hairline)
-            SetupRow(Icons.Rounded.NotificationsNone, "Stay informed", "Receive important Doomly updates and milestones.", notificationGranted)
+            when {
+                !accessibilityReady -> SetupRow(Icons.Rounded.Visibility, "Recognize Reels",
+                    "Identify Reels on your screen. We'll explain the permission before opening Settings.", false)
+                !signedIn -> SetupRow(Icons.Rounded.PersonOutline, "Save your progress",
+                    "Sign in to keep your counts synced and join the league.", false)
+                !notificationGranted -> SetupRow(Icons.Rounded.NotificationsNone, "Stay informed",
+                    "Enable notifications for Doomly updates and milestones.", false)
+                else -> SetupRow(Icons.Rounded.PersonOutline, "You're ready",
+                    "Your setup is complete. Let's get started.", true)
+            }
         }
 
         authError?.let {
@@ -126,27 +125,12 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
             shape = RoundedCornerShape(7.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Frost, contentColor = Void)
         ) {
-            Text(nextLabel(accessibilityReady, signedIn))
+            Text(if (completed == 3) "Get started" else nextLabel(accessibilityReady, signedIn))
             Spacer(Modifier.width(8.dp))
             Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, modifier = Modifier.size(18.dp))
         }
 
-        Spacer(Modifier.height(12.dp))
-        OutlinedButton(
-            onClick = {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
-            },
-            enabled = !notificationGranted,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-            shape = RoundedCornerShape(7.dp)
-        ) {
-            Icon(Icons.Rounded.NotificationsNone, null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(if (notificationGranted) "Notifications enabled" else "Enable notifications")
-        }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(16.dp))
         Text("You can review these permissions later in Android Settings.", style = MaterialTheme.typography.labelSmall, color = Muted, textAlign = TextAlign.Center)
         Spacer(Modifier.height(28.dp))
     }

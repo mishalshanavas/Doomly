@@ -30,8 +30,8 @@ import com.doomly.app.BuildConfig
 import com.doomly.app.DoomStatsStore
 import com.doomly.app.ProfileViewModel
 import com.doomly.app.data.AuthRepository
+import com.doomly.app.ui.components.DisclosureSection
 import com.doomly.app.ui.components.TurnHeader
-import com.doomly.app.ui.components.BoardArt
 import com.doomly.app.ui.components.PremiumCard
 import com.doomly.app.ui.components.DailyUsageHeatmap
 import com.doomly.app.ui.theme.*
@@ -93,7 +93,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(26.dp))
-        TurnHeader("Your player card", "Every little turn adds up.")
+        TurnHeader("Your profile")
         Spacer(Modifier.height(26.dp))
 
         Box(Modifier.size(82.dp).background(Mint, RoundedCornerShape(7.dp)), Alignment.Center) {
@@ -104,44 +104,36 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         Text(email, style = MaterialTheme.typography.bodySmall, color = Muted)
         Spacer(Modifier.height(22.dp))
 
-        PremiumCard(Modifier.fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Column(Modifier.weight(1f)) {
-                    Text("LIFETIME REELS", style = MaterialTheme.typography.labelSmall, color = Muted)
-                    Spacer(Modifier.height(5.dp))
-                    Text(total, style = MaterialTheme.typography.displayMedium)
-                }
-                BoardArt(com.doomly.app.R.drawable.board_trophy, Modifier.size(54.dp))
+        DisclosureSection("Usage history", "Streak, lifetime counts and the last 30 days") {
+            PremiumCard(Modifier.fillMaxWidth()) {
+                Text("LIFETIME REELS", style = MaterialTheme.typography.labelSmall, color = Muted)
+                Spacer(Modifier.height(5.dp))
+                Text(total, style = MaterialTheme.typography.displayMedium)
             }
-            Spacer(Modifier.height(6.dp))
-            Text("A number best enjoyed without context.", style = MaterialTheme.typography.bodySmall, color = Muted)
-        }
-        Spacer(Modifier.height(8.dp))
-
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ProfileStat(streak, "DAY STREAK", Modifier.weight(1f))
-            ProfileStat(target.toString(), "DAILY GOAL", Modifier.weight(1f))
-            ProfileStat(best.toString(), "BEST DAY", Modifier.weight(1f))
-        }
-
-        Spacer(Modifier.height(18.dp))
-        PremiumCard(Modifier.fillMaxWidth()) {
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ProfileStat(streak, "DAY STREAK", Modifier.weight(1f))
+                ProfileStat(target.toString(), "DAILY GOAL", Modifier.weight(1f))
+                ProfileStat(best.toString(), "MOST REELS", Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(18.dp))
             DailyUsageHeatmap(usageHistory, Modifier.fillMaxWidth())
         }
-
         if (BuildConfig.ENABLE_GITHUB_UPDATES) {
             Spacer(Modifier.height(22.dp))
-            Text("APP UPDATE", style = MaterialTheme.typography.labelSmall, color = Muted, modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(8.dp))
-            UpdateCard(
-                state = updateState,
-                onCheck = { updateManager.check { updateState = it } },
-                onDownload = { release -> updateManager.download(release) { updateState = it } },
-                onInstall = { ready ->
-                    val started = context.findActivity()?.let { updateManager.install(it, ready) } == true
-                    if (!started) updateState = UpdateState.Failed("Android could not open the package installer.")
-                }
-            )
+            val needsAttention = updateState !is UpdateState.UpToDate && updateState !is UpdateState.Checking
+            DisclosureSection("App updates", if (needsAttention) "An update needs your attention" else "Version ${BuildConfig.VERSION_NAME}",
+                initiallyExpanded = needsAttention, key = needsAttention) {
+                UpdateCard(
+                    state = updateState,
+                    onCheck = { updateManager.check { updateState = it } },
+                    onDownload = { release -> updateManager.download(release) { updateState = it } },
+                    onInstall = { ready ->
+                        val started = context.findActivity()?.let { updateManager.install(it, ready) } == true
+                        if (!started) updateState = UpdateState.Failed("Android could not open the package installer.")
+                    }
+                )
+            }
         }
 
         Spacer(Modifier.height(22.dp))

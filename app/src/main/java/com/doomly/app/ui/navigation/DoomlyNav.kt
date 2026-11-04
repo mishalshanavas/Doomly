@@ -1,5 +1,7 @@
 package com.doomly.app.ui.navigation
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.EmojiEvents
@@ -72,6 +74,8 @@ fun DoomlyNav(resumeCount: Int = 0) {
                     Triple(Route.BOARD, Icons.Rounded.EmojiEvents, "League"),
                     Triple(Route.PROFILE, Icons.Rounded.Person, "Profile")
                 ).forEach { (destination, icon, label) ->
+                    val tabColor by animateColorAsState(if (route == destination) Mint else Void,
+                        tween(180), label = "Selected tab")
                     NavigationBarItem(
                         selected = route == destination,
                         onClick = { nav.navigate(destination) {
@@ -79,7 +83,7 @@ fun DoomlyNav(resumeCount: Int = 0) {
                             launchSingleTop = true; restoreState = true
                         } },
                         icon = {
-                            Box(Modifier.size(38.dp).background(if (route == destination) Mint else Void, RoundedCornerShape(7.dp)), Alignment.Center) {
+                            Box(Modifier.size(38.dp).background(tabColor, RoundedCornerShape(7.dp)), Alignment.Center) {
                                 Icon(icon, label, Modifier.size(23.dp))
                             }
                         }, label = { Text(label) },

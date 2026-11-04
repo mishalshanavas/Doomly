@@ -11,6 +11,7 @@ import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -27,6 +28,7 @@ import com.doomly.app.ui.theme.*
 
 @Composable
 fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel()) {
+    var showAll by rememberSaveable { mutableStateOf(false) }
     val owner = LocalLifecycleOwner.current
     val loading by viewModel.getLoading().observeAsState(false)
     val entries by viewModel.getEntries().observeAsState(emptyList())
@@ -59,10 +61,15 @@ fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel()) {
                 item {
                     LeaderSummary(entries.first())
                     Spacer(Modifier.height(20.dp))
-                    Text("TODAY", style = MaterialTheme.typography.labelSmall, color = Muted)
+                    Text("TODAY · REELS", style = MaterialTheme.typography.labelSmall, color = Muted)
                     Spacer(Modifier.height(2.dp))
                 }
-                items(entries.take(30), key = { it.uid + it.rank }) { entry -> LeaderRow(entry) }
+                items(entries.take(if (showAll) 30 else 5), key = { it.uid + it.rank }) { entry -> LeaderRow(entry) }
+                if (entries.size > 5) item {
+                    TextButton(onClick = { showAll = !showAll }, modifier = Modifier.fillMaxWidth()) {
+                        Text(if (showAll) "Show top 5" else "Show more players")
+                    }
+                }
             }
         }
     }
@@ -77,7 +84,7 @@ private fun LeaderSummary(leader: LeaderboardRepository.LeaderboardEntry) {
             }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text("CURRENT MENACE", style = MaterialTheme.typography.labelSmall, color = Muted)
+                Text("LEADING TODAY", style = MaterialTheme.typography.labelSmall, color = Muted)
                 Text(leader.displayName, style = MaterialTheme.typography.titleLarge, maxLines = 1)
             }
             Column(horizontalAlignment = Alignment.End) {
@@ -107,7 +114,6 @@ private fun LeaderRow(entry: LeaderboardRepository.LeaderboardEntry) {
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(entry.displayName, style = MaterialTheme.typography.titleSmall, maxLines = 1)
-            Text(if (entry.rank <= 3) "Certified scroll athlete" else "Still in the thumb race", style = MaterialTheme.typography.bodySmall, color = Muted)
         }
         Text(entry.reels.toString(), style = MaterialTheme.typography.titleMedium)
     }
