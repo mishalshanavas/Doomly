@@ -40,3 +40,51 @@ Level progression and generic goal-chasing copy have been removed from Home.
 The Instagram action is integrated into “A minor detour”: a thin conceptual route
 from “The plan” to the inline “Open Instagram” destination. Pressing the action
 briefly highlights the route; there is no idle animation or separate oversized CTA.
+
+## Daily small achievement
+
+Home replaces the raw next-milestone row with one compact daily achievement. Seven
+dry-humor titles rotate deterministically by local date, with small targets of
+3–10 Reels, capped by the daily goal when the achievement is first chosen. That
+selection is frozen for the day. A small progress fraction becomes an earned check
+and brief icon pop. Earned state persists locally and is reset for the next date;
+opening the app or rotating the screen does not repeatedly replay an earned badge.
+There is no additional notification, level system, or expanded achievement panel.
+
+## Yesterday and long-session reminders
+
+Home has a faint marker for yesterday's recorded total and a green dot for today.
+No baseline is invented when yesterday has no data. Equal/zero values remain valid.
+
+The accessibility service observes Instagram foreground windows while a session
+is active. A session qualifies for a quiet Reel reminder only after at least 10
+minutes of confirmed foreground observations and at least one detected Reel. A
+real application switch is confirmed across two checks before notification. Short
+sessions cannot accumulate; screen lock, screen off, service interruption, or a
+long observation gap cancel the session. No other app's labels/content are read.
+
+Reminders are limited to once per local day, use a separate Android channel, and
+open Instagram directly through an activity PendingIntent. Returning to Instagram
+cancels an outstanding reminder. Notification permission and channel muting are
+respected; there are no alarms, new permissions, or global app-event subscriptions.
+
+## App icon
+
+The app icon is an original pair of half-closed, right-looking eyes in warm white
+on charcoal. The SVG in `store-assets/doomly-icon.svg` is the source of truth;
+`scripts/generate_launcher.py` generates every launcher density, the round icon,
+adaptive/themed vector layers, the notification silhouette, and Play Store artwork.
+Pupil cutouts stay transparent in the monochrome layer. No pawn is used in the icon.
+
+## App-open updates
+
+The GitHub distribution checks for a newer release whenever the activity enters
+foreground, coalescing checks while a request/download is active. Available APKs
+download automatically. Shared update state survives tab navigation and rotation;
+a compact banner shows download progress or an install action across screens.
+The installer is opened automatically once per ready release while foreground.
+Android still requires confirmation and, where needed, permission to install from
+this source. Returning after granting that permission resumes installation; cancel
+or denial leaves a manual install action rather than repeatedly reopening prompts.
+Verified cached APKs can be reused after a restart. The Play distribution keeps
+GitHub self-updates disabled. No overlay permission or overlay UI has been added.

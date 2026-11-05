@@ -7,6 +7,11 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ViewModelProvider
+import com.doomly.app.update.AppUpdateViewModel
+import com.doomly.app.update.UpdateState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import com.doomly.app.data.AuthRepository
@@ -15,6 +20,7 @@ import com.doomly.app.ui.theme.DoomlyTheme
 
 class MainActivity : ComponentActivity() {
 
+    private val appUpdates by lazy { ViewModelProvider(this)[AppUpdateViewModel::class.java] }
     private var notificationDestination = mutableStateOf<String?>(null)
     private var resumeCount = mutableIntStateOf(0)
 
@@ -25,9 +31,23 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             DoomlyTheme {
-                DoomlyNav(resumeCount = resumeCount.intValue, notificationDestination = notificationDestination.value, onNotificationHandled = { notificationDestination.value = null })
+                val updateState = appUpdates.state
+                LaunchedEffect(updateState) {
+                    if (updateState is UpdateState.ReadyToInstall && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) appUpdates.onActivityResumed(this@MainActivity)
+                }
+                DoomlyNav(resumeCount = resumeCount.intValue, notificationDestination = notificationDestination.value, onNotificationHandled = { notificationDestination.value = null }, updates = appUpdates, onInstallUpdate = { appUpdates.install(this@MainActivity) })
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        appUpdates.onAppOpen()
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        appUpdates.onActivityResumed(this)
     }
 
     override fun onNewIntent(intent: Intent) {

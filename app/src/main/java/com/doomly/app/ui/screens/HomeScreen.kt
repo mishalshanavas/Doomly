@@ -116,10 +116,8 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
             }
         }
         HorizontalDivider(color = Hairline)
-        Row(Modifier.fillMaxWidth().padding(vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Next milestone", style = MaterialTheme.typography.bodySmall, color = Muted, modifier = Modifier.weight(1f))
-            Text("${MotivationEngine.nextMilestone(reels, target)} Reels", style = MaterialTheme.typography.bodySmall, color = Frost)
-        }
+        YesterdayGhost(today = reels, yesterday = history[LocalDate.now().minusDays(1).toString()])
+        if (snapshot != null) DailyAchievementBadge(reels = reels, dailyGoal = target)
         MilestonePop(milestone, celebrationEvent)
         goalFeedback?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Muted,
             modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }) }

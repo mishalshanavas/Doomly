@@ -44,6 +44,10 @@ public class DoomlyAccessibilityService extends AccessibilityService {
     private static final String KEY_RECENT_FINGERPRINTS = "recent_fingerprints";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private final InstagramSession instagramSession = new InstagramSession();
+    private final Runnable sessionCheck = this::checkInstagramSession;
+    private long possibleInstagramExitAt;
+    private int missingSessionWindows;
     private Runnable pendingCount;
     private String lastObservedFingerprint = "";
     private final RecentFingerprintCache recentlyCounted =
@@ -90,7 +94,9 @@ public class DoomlyAccessibilityService extends AccessibilityService {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return;
         try {
+            if (!INSTAGRAM_PKG.contentEquals(root.getPackageName())) return;
             long now = SystemClock.elapsedRealtime();
+            observeInstagramSession(now);
             ScreenInfo info = ScreenInfo.from(root);
             String summary = info.summary();
             if (!summary.equals(lastScreenSummary)) {
@@ -149,6 +155,75 @@ public class DoomlyAccessibilityService extends AccessibilityService {
         }
     }
 
+    private void observeInstagramSession(long now) {
+        boolean alreadyActive = instagramSession.active();
+        instagramSession.observeForeground(now);
+        possibleInstagramExitAt = 0;
+        missingSessionWindows = 0;
+        if (!alreadyActive) {
+            androidx.core.app.NotificationManagerCompat.from(this).cancel(103);
+            handler.postDelayed(sessionCheck, 5_000L);
+        }
+    }
+
+    /** Package/window checks only. Other applications' screen content is never inspected. */
+    private void checkInstagramSession() {
+        if (!instagramSession.active()) return;
+        android.os.PowerManager power = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+        android.app.KeyguardManager keyguard = (android.app.KeyguardManager) getSystemService(KEYGUARD_SERVICE);
+        if (!power.isInteractive() || keyguard.isKeyguardLocked() || instagramSession.stale(SystemClock.elapsedRealtime())) {
+            instagramSession.cancel();
+            leaveReels();
+            return;
+        }
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        try {
+            if (root == null) {
+                if (++missingSessionWindows >= 3) { instagramSession.cancel(); leaveReels(); return; }
+            } else {
+                missingSessionWindows = 0;
+                if (INSTAGRAM_PKG.contentEquals(root.getPackageName())) {
+                    instagramSession.observeForeground(SystemClock.elapsedRealtime());
+                    possibleInstagramExitAt = 0;
+                } else {
+                    boolean applicationWindow = false;
+                    for (android.view.accessibility.AccessibilityWindowInfo window : getWindows()) {
+                        if (window.getId() == root.getWindowId()
+                                && window.getType() == android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION) {
+                            applicationWindow = true;
+                        }
+                        window.recycle();
+                    }
+                    // Ignore keyboards and notification shades; confirm a real app switch twice.
+                    if (applicationWindow) {
+                        long now = SystemClock.elapsedRealtime();
+                        if (possibleInstagramExitAt == 0) possibleInstagramExitAt = now;
+                        else if (now - possibleInstagramExitAt >= 5_000L) {
+                            long duration = instagramSession.finish();
+                            leaveReels();
+                            if (duration > 0) showLongSessionReminder(duration);
+                            return;
+                        }
+                    }
+                }
+            }
+        } catch (RuntimeException ignored) {
+            instagramSession.cancel();
+            leaveReels();
+            return;
+        } finally { if (root != null) root.recycle(); }
+        handler.postDelayed(sessionCheck, 5_000L);
+    }
+
+    private void showLongSessionReminder(long duration) {
+        android.content.SharedPreferences prefs = getSharedPreferences("doomly_session_reminders", MODE_PRIVATE);
+        String today = java.time.LocalDate.now().toString();
+        if (today.equals(prefs.getString("last_sent_day", ""))) return;
+        if (DoomlyNotifications.showReelReminder(this, duration / 60_000L)) {
+            prefs.edit().putString("last_sent_day", today).apply();
+        }
+    }
+
     private boolean isReelPagerScroll(AccessibilityEvent event, ScreenInfo info) {
         AccessibilityNodeInfo source = event.getSource();
         if (source == null) return info.hasViewerPager;
@@ -189,6 +264,7 @@ public class DoomlyAccessibilityService extends AccessibilityService {
             }
 
             DoomStatsStore.Snapshot snapshot = DoomStatsStore.recordReel(this);
+            instagramSession.recordReel();
             RecentActivityLog.record(this, 1);
             MotivationNotifier.celebrateIfNeeded(this, snapshot);
             recentlyCounted.remember(fingerprint, wallClockNow);
@@ -225,11 +301,14 @@ public class DoomlyAccessibilityService extends AccessibilityService {
 
     @Override
     public void onInterrupt() {
+        instagramSession.cancel();
+        handler.removeCallbacks(sessionCheck);
         leaveReels();
     }
 
     @Override
     public void onDestroy() {
+        instagramSession.cancel();
         leaveReels();
         handler.removeCallbacksAndMessages(null);
         fileLog("=== detector stopped ===");

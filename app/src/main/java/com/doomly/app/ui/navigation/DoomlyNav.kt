@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.*
+import com.doomly.app.update.AppUpdateViewModel
+import com.doomly.app.ui.components.UpdateBanner
 import com.doomly.app.ui.screens.*
 import com.doomly.app.ui.theme.*
 
@@ -29,7 +31,7 @@ private object Route {
 }
 
 @Composable
-fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onNotificationHandled: () -> Unit = {}) {
+fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onNotificationHandled: () -> Unit = {}, updates: AppUpdateViewModel? = null, onInstallUpdate: () -> Unit = {}) {
     val context = LocalContext.current
     val nav = rememberNavController()
     val entry by nav.currentBackStackEntryAsState()
@@ -45,6 +47,7 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
 
     Scaffold(
         containerColor = Void,
+        topBar = { if (updates != null) UpdateBanner(updates.state, onInstallUpdate) },
         bottomBar = {
             if (ready && route != Route.PERMISSIONS) {
                 Box(Modifier.fillMaxWidth().background(Void).navigationBarsPadding()) {
@@ -93,7 +96,7 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
                     nav.navigate(Route.HOME) { popUpTo(Route.PERMISSIONS) { inclusive = true }; launchSingleTop = true }
                 })
             }
-            composable(Route.PROFILE) { ProfileScreen(resumeCount = resumeCount) }
+            composable(Route.PROFILE) { ProfileScreen(resumeCount = resumeCount, updates = updates, onInstallUpdate = onInstallUpdate) }
         }
     }
 }

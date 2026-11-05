@@ -1,8 +1,7 @@
 package com.doomly.app.ui.screens
 
-import android.app.Activity
 import android.content.Context
-import android.content.ContextWrapper
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -35,11 +34,11 @@ import com.doomly.app.ui.components.PageHeader
 import com.doomly.app.ui.components.PremiumCard
 import com.doomly.app.ui.components.DailyUsageHeatmap
 import com.doomly.app.ui.theme.*
-import com.doomly.app.update.GitHubUpdateManager
+import com.doomly.app.update.AppUpdateViewModel
 import com.doomly.app.update.UpdateState
 
 @Composable
-fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Unit = {}, resumeCount: Int = 0) {
+fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Unit = {}, resumeCount: Int = 0, updates: AppUpdateViewModel? = null, onInstallUpdate: () -> Unit = {}) {
     LaunchedEffect(resumeCount) { viewModel.refresh() }
     val context = LocalContext.current
     val name by viewModel.getDisplayName().observeAsState("Doomly user")
@@ -56,20 +55,9 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
     }
     val avatarSeed = if (signedIn) AuthRepository.getInstance().currentUid(context).ifBlank { email } else localAvatarSeed
     var confirmSignOut by remember { mutableStateOf(false) }
-    val updateManager = remember(context) { GitHubUpdateManager(context) }
-    var updateState by remember { mutableStateOf<UpdateState>(UpdateState.Checking) }
-
-    LaunchedEffect(updateManager) {
-        if (BuildConfig.ENABLE_GITHUB_UPDATES) updateManager.check { updateState = it }
-    }
-
-    LaunchedEffect(updateState) {
-        val ready = updateState as? UpdateState.ReadyToInstall ?: return@LaunchedEffect
-        context.findActivity()?.let { updateManager.install(it, ready) }
-    }
+    val updateState = updates?.state ?: UpdateState.UpToDate
 
     com.doomly.app.ui.components.StatsRefreshEffect { viewModel.refresh() }
-    DisposableEffect(updateManager) { onDispose(updateManager::cancel) }
     val best = maxOf(DoomStatsStore.dailyHistory(context).values.maxOrNull() ?: 0, DoomStatsStore.snapshot(context).todayReels)
     val usageHistory = DoomStatsStore.dailyHistory(context).toMutableMap().apply {
         put(java.time.LocalDate.now().toString(), DoomStatsStore.snapshot(context).todayReels)
@@ -126,12 +114,9 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
             Spacer(Modifier.height(22.dp))
             UpdateCard(
                 state = updateState,
-                onCheck = { updateManager.check { updateState = it } },
-                onDownload = { release -> updateManager.download(release) { updateState = it } },
-                onInstall = { ready ->
-                    val started = context.findActivity()?.let { updateManager.install(it, ready) } == true
-                    if (!started) updateState = UpdateState.Failed("Android could not open the package installer.")
-                }
+                onCheck = { updates?.checkNow() },
+                onDownload = { release -> updates?.download(release) },
+                onInstall = { onInstallUpdate() }
             )
         }
 
@@ -207,21 +192,21 @@ private fun UpdateCard(
         }
         is UpdateState.Available -> {
             title = "Doomly ${state.release.versionName} is available"
-            body = "A signed update is ready on GitHub. Android will ask before installing it."
+            body = "Downloading automatically. Android will ask before installing it."
             button = "Download update"
             enabled = true
             action = { onDownload(state.release) }
         }
         is UpdateState.Downloading -> {
             title = "Downloading ${state.release.versionName}"
-            body = "${state.percent}% complete. Tiny package, large ambitions."
+            body = "${state.percent}% complete. You can keep using Doomly."
             button = "Downloading…"
             enabled = false
             action = {}
         }
         is UpdateState.ReadyToInstall -> {
             title = "Update verified"
-            body = "Package name, version, and signing certificate all match."
+            body = "Verified and ready. Confirm installation in Android."
             button = "Install update"
             enabled = true
             action = { onInstall(state) }
@@ -277,13 +262,4 @@ private fun ProfileStat(value: String, label: String, modifier: Modifier = Modif
         Spacer(Modifier.height(5.dp))
         Text(label, style = MaterialTheme.typography.bodySmall, color = Muted)
     }
-}
-
-private fun Context.findActivity(): Activity? {
-    var current = this
-    while (current is ContextWrapper) {
-        if (current is Activity) return current
-        current = current.baseContext
-    }
-    return null
 }

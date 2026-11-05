@@ -55,3 +55,9 @@ Emulator verification was attempted on this host but could not complete: the
 Android guest CPU threads hang under the host's KVM configuration. Device checks
 above remain pending. No real push notifications were sent and no backend was
 deployed during validation.
+
+GitHub update checks now run at app foreground entry rather than only when Profile
+is opened. The shared updater downloads automatically, reuses matching verified
+cached APKs, exposes progress/ready status across screens, and resumes after the
+Android install-source permission flow. Installation remains subject to Android's
+confirmation. Play builds do not sideload GitHub APKs. No overlay is implemented.

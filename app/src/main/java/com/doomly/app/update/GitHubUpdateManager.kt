@@ -76,7 +76,8 @@ class GitHubUpdateManager(context: Context) {
                             val json = JSONObject(response.body?.string().orEmpty())
                             val release = parseRelease(json)
                             val state = if (UpdateVersionPolicy.isNewer(release.versionName, BuildConfig.VERSION_NAME)) {
-                                UpdateState.Available(release)
+                                val cached = matchingCachedApk(release)
+                                if (cached != null) UpdateState.ReadyToInstall(release, cached) else UpdateState.Available(release)
                             } else {
                                 UpdateState.UpToDate
                             }
@@ -115,7 +116,7 @@ class GitHubUpdateManager(context: Context) {
                             return
                         }
                         val declaredLength = body.contentLength()
-                        if (declaredLength <= 0 || declaredLength > MAX_APK_BYTES) {
+                        if (declaredLength <= 0 || declaredLength > MAX_APK_BYTES || declaredLength != release.apkSize) {
                             post(onState, UpdateState.Failed("The update has an unexpected size."))
                             return
                         }
@@ -146,10 +147,11 @@ class GitHubUpdateManager(context: Context) {
                                             post(onState, UpdateState.Downloading(release, percent))
                                         }
                                     }
+                                    if (downloaded != declaredLength) throw IOException("Incomplete APK")
                                     output.fd.sync()
                                 }
                             }
-                            if (!partial.renameTo(apk) || !verifyDownloadedApk(apk)) {
+                            if (!partial.renameTo(apk) || matchingCachedApk(release) == null) {
                                 partial.delete()
                                 apk.delete()
                                 post(onState, UpdateState.Failed("Update verification failed. Nothing was installed."))
@@ -165,6 +167,14 @@ class GitHubUpdateManager(context: Context) {
                 }
             })
         }
+    }
+
+    private fun matchingCachedApk(release: GitHubRelease): File? {
+        val apk = File(appContext.cacheDir, "updates/doomly-update.apk")
+        if (!apk.isFile || apk.length() != release.apkSize || !verifyDownloadedApk(apk)) return null
+        @Suppress("DEPRECATION")
+        val info = appContext.packageManager.getPackageArchiveInfo(apk.absolutePath, 0)
+        return apk.takeIf { info?.versionName == release.versionName }
     }
 
     fun install(activity: Activity, ready: UpdateState.ReadyToInstall): Boolean {
@@ -233,7 +243,8 @@ class GitHubUpdateManager(context: Context) {
         if (archive.packageName != appContext.packageName) return false
         val installed = appContext.packageManager.getPackageInfo(appContext.packageName, flags)
         if (archive.longVersionCodeCompat() <= installed.longVersionCodeCompat()) return false
-        return certificateDigests(archive) == certificateDigests(installed)
+        val installedSigners = certificateDigests(installed)
+        return installedSigners.isNotEmpty() && certificateDigests(archive) == installedSigners
     }
 
     @Suppress("DEPRECATION")

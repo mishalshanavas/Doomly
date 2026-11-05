@@ -11,6 +11,7 @@ import androidx.core.app.NotificationManagerCompat;
 /** One replaceable notification per category, each with independent Android controls. */
 public final class DoomlyNotifications {
     public static final String MILESTONES = "doomly_milestones";
+    public static final String REEL_REMINDERS = "doomly_reel_reminders";
     public static final String UPDATES = "doomly_admin";
     private DoomlyNotifications() {}
     public static void createChannel(Context ctx) {
@@ -23,6 +24,9 @@ public final class DoomlyNotifications {
         updates.setDescription("Updates sent by Doomly. Managed independently from milestones.");
         manager.createNotificationChannel(milestones);
         manager.createNotificationChannel(updates);
+        NotificationChannel reminders = new NotificationChannel(REEL_REMINDERS, "Reel reminders", NotificationManager.IMPORTANCE_LOW);
+        reminders.setDescription("A quiet reminder after leaving a 10-minute Instagram session with Reels. At most once per day.");
+        manager.createNotificationChannel(reminders);
         if (legacy != null) manager.deleteNotificationChannel("doomly_custom");
     }
     public static boolean enabled(Context ctx, String channel) {
@@ -32,6 +36,23 @@ public final class DoomlyNotifications {
     }
     public static boolean showMilestone(Context ctx, String body) { return post(ctx, MILESTONES, 101, "Thumb achievement unlocked", body); }
     public static void show(Context ctx, String title, String body) { post(ctx, UPDATES, 102, title, body); }
+    public static boolean showReelReminder(Context ctx, long minutes) {
+        if (!enabled(ctx, REEL_REMINDERS)) return false;
+        Intent instagram = ctx.getPackageManager().getLaunchIntentForPackage("com.instagram.android");
+        if (instagram == null) return false;
+        instagram.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        PendingIntent open = PendingIntent.getActivity(ctx, 103, instagram,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(ctx, REEL_REMINDERS)
+                .setSmallIcon(R.drawable.ic_stat_doomly).setColor(0xFF0ACF70)
+                .setContentTitle("Back to the Reels?")
+                .setContentText("Your last Instagram session lasted " + minutes + " minutes. Tap to reopen Instagram.")
+                .setContentIntent(open).setAutoCancel(true).setOnlyAlertOnce(true)
+                .addAction(0, "Open Instagram", open);
+        try { NotificationManagerCompat.from(ctx).notify(103, builder.build()); return true; }
+        catch (SecurityException ignored) { return false; }
+    }
+
     private static boolean post(Context ctx, String channel, int id, String title, String body) {
         if (!enabled(ctx, channel)) return false;
         Intent intent = new Intent(ctx, MainActivity.class).putExtra("notification_destination", channel.equals(UPDATES) ? "profile" : "home")

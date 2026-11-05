@@ -16,7 +16,7 @@ fun NotificationSettings(refreshKey: Int = 0) {
     val context = LocalContext.current
     val allowed = remember(refreshKey) { androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled() }
     val categories = remember(refreshKey) {
-        listOf(DoomlyNotifications.MILESTONES to "Milestones", DoomlyNotifications.UPDATES to "App updates")
+        listOf(DoomlyNotifications.MILESTONES to "Milestones", DoomlyNotifications.UPDATES to "App updates", DoomlyNotifications.REEL_REMINDERS to "Reel reminders")
             .map { (id, title) -> Triple(id, title, DoomlyNotifications.enabled(context, id)) }
     }
     Column(Modifier.fillMaxWidth()) {
