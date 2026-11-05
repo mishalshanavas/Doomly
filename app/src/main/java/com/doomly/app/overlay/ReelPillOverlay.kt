@@ -2,6 +2,9 @@ package com.doomly.app.overlay
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.hardware.display.DisplayManager
+import android.view.Display
+import android.util.Log
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
@@ -26,19 +29,37 @@ import java.time.LocalDate
 /** A short, opt-in overlay tied to a confirmed Reel, never a full-screen window. */
 class ReelPillOverlay(private val context: Context, private val isReelsForeground: () -> Boolean) {
     private val windowContext by lazy {
-        if (Build.VERSION.SDK_INT >= 30) context.createWindowContext(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null)
-        else context
+        if (Build.VERSION.SDK_INT >= 30) {
+            // A Service is not attached to a display. Associate one before creating UI.
+            val display = context.getSystemService(DisplayManager::class.java)
+                .getDisplay(Display.DEFAULT_DISPLAY)
+                ?: throw IllegalStateException("No display available for the Reel pill")
+            context.createDisplayContext(display)
+                .createWindowContext(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null)
+        } else context
     }
     private val windows by lazy { windowContext.getSystemService(WindowManager::class.java) }
     private val handler = Handler(Looper.getMainLooper())
     private val prefs = preferences(context)
     private var pill: View? = null
     private val changed = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == "enabled") handler.post { if (!enabled(context)) hide() }
+        if (key == "enabled") handler.post { safely { if (!enabled(context)) hide() } }
     }
     init { prefs.registerOnSharedPreferenceChangeListener(changed) }
 
     fun showIfMilestone(reels: Int) {
+        safely { showMilestone(reels) }
+    }
+
+    // Covers window creation as well as callbacks dispatched after addView returns.
+    private inline fun safely(action: () -> Unit) {
+        try { action() } catch (error: RuntimeException) {
+            Log.w("ReelPillOverlay", "Could not display Reel celebration", error)
+            hide()
+        }
+    }
+
+    private fun showMilestone(reels: Int) {
         if (reels <= 0 || reels % 10 != 0 || !enabled(context)) return
         val day = LocalDate.now().toString()
         if (prefs.getString("last_day", "") == day && prefs.getInt("last_count", 0) >= reels) return
@@ -99,25 +120,31 @@ class ReelPillOverlay(private val context: Context, private val isReelsForegroun
             params.y = y
             try { windows.updateViewLayout(view, params) } catch (_: RuntimeException) { hide() }
         }
-        ViewCompat.setOnApplyWindowInsetsListener(view) { _, insets -> position(insets); insets }
+        ViewCompat.setOnApplyWindowInsetsListener(view) { _, insets -> safely { position(insets) }; insets }
         pill = view
         try {
             windows.addView(view, params)
             prefs.edit().putString("last_day", day).putInt("last_count", reels).apply()
             view.doOnLayout {
-                position(ViewCompat.getRootWindowInsets(view))
-                if (pill === view) view.animate().alpha(1f).setDuration(160).start()
+                safely {
+                    position(ViewCompat.getRootWindowInsets(view))
+                    if (pill === view) view.animate().alpha(1f).setDuration(160).start()
+                }
             }
             ViewCompat.requestApplyInsets(view)
             handler.postDelayed(object : Runnable {
                 override fun run() {
                     if (pill !== view) return
-                    if (!enabled(context) || !isReelsForeground()) { hide(); return }
-                    handler.postDelayed(this, 250L)
+                    safely {
+                        if (!enabled(context) || !isReelsForeground()) hide()
+                        else handler.postDelayed(this, 250L)
+                    }
                 }
             }, 250L)
             handler.postDelayed({
-                if (pill === view) view.animate().alpha(0f).setDuration(140).withEndAction { if (pill === view) hide() }.start()
+                safely {
+                    if (pill === view) view.animate().alpha(0f).setDuration(140).withEndAction { if (pill === view) hide() }.start()
+                }
             }, 3_000L)
         } catch (_: RuntimeException) { hide() }
     }
@@ -126,8 +153,10 @@ class ReelPillOverlay(private val context: Context, private val isReelsForegroun
         val current = pill
         pill = null
         handler.removeCallbacksAndMessages(null)
-        current?.animate()?.cancel()
-        if (current != null) try { windows.removeViewImmediate(current) } catch (_: RuntimeException) { /* Already detached. */ }
+        if (current != null) {
+            try { current.animate().cancel() } catch (_: RuntimeException) { /* Already detached. */ }
+            try { windows.removeViewImmediate(current) } catch (_: RuntimeException) { /* Already detached. */ }
+        }
     }
 
     fun close() { hide(); prefs.unregisterOnSharedPreferenceChangeListener(changed) }
