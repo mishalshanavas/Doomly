@@ -48,6 +48,7 @@ public class DoomlyAccessibilityService extends AccessibilityService {
     private final Runnable sessionCheck = this::checkInstagramSession;
     private long possibleInstagramExitAt;
     private int missingSessionWindows;
+    private com.doomly.app.overlay.ReelPillOverlay reelPill;
     private Runnable pendingCount;
     private String lastObservedFingerprint = "";
     private final RecentFingerprintCache recentlyCounted =
@@ -63,6 +64,7 @@ public class DoomlyAccessibilityService extends AccessibilityService {
     @Override
     public void onCreate() {
         super.onCreate();
+        reelPill = new com.doomly.app.overlay.ReelPillOverlay(this, this::isReelsWindowActive);
         recentlyCounted.restore(
                 getSharedPreferences(DETECTOR_PREFS, MODE_PRIVATE)
                         .getString(KEY_RECENT_FINGERPRINTS, ""),
@@ -265,6 +267,7 @@ public class DoomlyAccessibilityService extends AccessibilityService {
 
             DoomStatsStore.Snapshot snapshot = DoomStatsStore.recordReel(this);
             instagramSession.recordReel();
+            reelPill.showIfMilestone(snapshot.todayReels);
             RecentActivityLog.record(this, 1);
             MotivationNotifier.celebrateIfNeeded(this, snapshot);
             recentlyCounted.remember(fingerprint, wallClockNow);
@@ -283,6 +286,26 @@ public class DoomlyAccessibilityService extends AccessibilityService {
         }
     }
 
+    private boolean isReelsWindowActive() {
+        android.os.PowerManager power = (android.os.PowerManager) getSystemService(POWER_SERVICE);
+        android.app.KeyguardManager keyguard = (android.app.KeyguardManager) getSystemService(KEYGUARD_SERVICE);
+        if (!power.isInteractive() || keyguard.isKeyguardLocked()) return false;
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return false;
+        try {
+            if (!INSTAGRAM_PKG.contentEquals(root.getPackageName())) return false;
+            ScreenInfo info = ScreenInfo.from(root);
+            return inReels && info.looksLikeReels() && !info.isOverlayOpen && !info.isAd;
+        } catch (RuntimeException ignored) { return false; }
+        finally { root.recycle(); }
+    }
+
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if (reelPill != null) reelPill.hide();
+    }
+
     private void cancelPendingCount() {
         if (pendingCount != null) {
             handler.removeCallbacks(pendingCount);
@@ -291,6 +314,7 @@ public class DoomlyAccessibilityService extends AccessibilityService {
     }
 
     private void leaveReels() {
+        if (reelPill != null) reelPill.hide();
         cancelPendingCount();
         if (inReels) {
             debug("left reels");
@@ -311,6 +335,7 @@ public class DoomlyAccessibilityService extends AccessibilityService {
         instagramSession.cancel();
         leaveReels();
         handler.removeCallbacksAndMessages(null);
+        if (reelPill != null) reelPill.close();
         fileLog("=== detector stopped ===");
         super.onDestroy();
     }

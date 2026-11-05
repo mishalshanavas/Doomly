@@ -87,4 +87,19 @@ Android still requires confirmation and, where needed, permission to install fro
 this source. Returning after granting that permission resumes installation; cancel
 or denial leaves a manual install action rather than repeatedly reopening prompts.
 Verified cached APKs can be reused after a restart. The Play distribution keeps
-GitHub self-updates disabled. No overlay permission or overlay UI has been added.
+GitHub self-updates disabled. The update feature does not use overlay APIs.
+
+## Transient Reel pill
+
+Profile → Reel celebrations opts into a charcoal pill over Instagram at each 10th
+counted Reel. Android's display-over-other-apps permission is requested only when
+that switch is enabled. The eyes icon, count, and one short appreciative line fade
+in, remain for about three seconds, and fade out. Tap or long-press dismisses it.
+
+Placement uses the reported top display cutout and status-bar insets, with a top
+centre fallback and screen-edge clamping. Rotation hides the current pill. While
+visible, a brief foreground check removes it on app exit, ads/comments, screen lock,
+or permission revocation. It never takes keyboard focus or covers the whole screen.
+The service removes its window and callbacks on interruption or destruction. Daily
+milestones are deduplicated across service restarts; old milestones are not replayed.
+Device testing is needed for manufacturer-specific cutout and overlay behavior.

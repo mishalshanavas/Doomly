@@ -27,6 +27,7 @@ import com.doomly.app.DoomStatsStore
 import com.doomly.app.ProfileViewModel
 import com.doomly.app.data.AuthRepository
 import com.doomly.app.ui.components.SignInButton
+import com.doomly.app.ui.components.ReelPillSettings
 import com.doomly.app.ui.components.NotificationSettings
 import com.doomly.app.CloudSyncScheduler
 import com.doomly.app.ui.components.GeneratedAvatar
@@ -132,6 +133,8 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
                 CloudSyncScheduler.scheduleSync(context)
             })
         }
+        Spacer(Modifier.height(16.dp))
+        ReelPillSettings(resumeCount)
         Spacer(Modifier.height(16.dp))
         NotificationSettings(resumeCount)
         if (signedIn) {

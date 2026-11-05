@@ -60,4 +60,4 @@ GitHub update checks now run at app foreground entry rather than only when Profi
 is opened. The shared updater downloads automatically, reuses matching verified
 cached APKs, exposes progress/ready status across screens, and resumes after the
 Android install-source permission flow. Installation remains subject to Android's
-confirmation. Play builds do not sideload GitHub APKs. No overlay is implemented.
+confirmation. Play builds do not sideload GitHub APKs. The optional Reel celebration overlay is documented in ui-design.md.
