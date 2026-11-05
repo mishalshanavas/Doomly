@@ -2,6 +2,9 @@ package com.doomly.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.doomly.app.R
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -28,7 +31,14 @@ fun MinorDetour(onOpenInstagram: () -> Unit) {
     val startColor = Muted
     val endColor = Mint
     Column(Modifier.fillMaxWidth().padding(top = 24.dp)) {
-        Text("A minor detour", style = MaterialTheme.typography.titleMedium, color = Frost)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Image(painterResource(R.drawable.ic_coach), "Mochi, your scroll coach", Modifier.size(44.dp))
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text("Mochi’s coaching corner", style = MaterialTheme.typography.titleMedium, color = Frost)
+                Text("Great things await. Probably in the next Reel.", style = MaterialTheme.typography.bodySmall, color = Muted)
+            }
+        }
         Spacer(Modifier.height(20.dp))
         Text("The plan", style = MaterialTheme.typography.bodySmall, color = Muted)
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), verticalAlignment = Alignment.Bottom) {

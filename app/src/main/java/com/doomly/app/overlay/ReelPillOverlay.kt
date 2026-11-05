@@ -24,7 +24,11 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnLayout
 import com.doomly.app.R
-import java.time.LocalDate
+import android.animation.ValueAnimator
+import android.os.SystemClock
+import android.view.MotionEvent
+import android.view.HapticFeedbackConstants
+import android.view.animation.OvershootInterpolator
 
 /** A short, opt-in overlay tied to a confirmed Reel, never a full-screen window. */
 class ReelPillOverlay(private val context: Context, private val isReelsForeground: () -> Boolean) {
@@ -42,6 +46,11 @@ class ReelPillOverlay(private val context: Context, private val isReelsForegroun
     private val handler = Handler(Looper.getMainLooper())
     private val prefs = preferences(context)
     private var pill: View? = null
+    private var snoozed = false
+    private var lastCount = 0
+    private var lastShown = -30_000L
+    fun beginSession() { hide(); snoozed = false; lastCount = 0; lastShown = -30_000L }
+    fun preview() { safely { showMilestone(30, true) } }
     private val changed = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "enabled") handler.post { safely { if (!enabled(context)) hide() } }
     }
@@ -59,11 +68,11 @@ class ReelPillOverlay(private val context: Context, private val isReelsForegroun
         }
     }
 
-    private fun showMilestone(reels: Int) {
+    private fun showMilestone(reels: Int, preview: Boolean = false) {
         if (reels <= 0 || reels % 10 != 0 || !enabled(context)) return
-        val day = LocalDate.now().toString()
-        if (prefs.getString("last_day", "") == day && prefs.getInt("last_count", 0) >= reels) return
-        if (!isReelsForeground()) return
+        if (!preview && (snoozed || reels <= lastCount || SystemClock.elapsedRealtime() - lastShown < 30_000L)) return
+        if (!preview && !isReelsForeground()) return
+        val motion = ValueAnimator.areAnimatorsEnabled() && !prefs.getBoolean("reduce_motion", false)
         hide()
         val width = screenWidth()
         val view = LinearLayout(windowContext).apply {
@@ -75,7 +84,7 @@ class ReelPillOverlay(private val context: Context, private val isReelsForegroun
             alpha = 0f
         }
         view.addView(ImageView(windowContext).apply {
-            setImageResource(R.drawable.ic_stat_doomly)
+            setImageResource(R.drawable.ic_coach)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }, LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(8) })
         val message = "$reels Reels · ${appreciation(reels)}"
@@ -88,9 +97,22 @@ class ReelPillOverlay(private val context: Context, private val isReelsForegroun
             ellipsize = TextUtils.TruncateAt.END
             maxWidth = (width - dp(84)).coerceAtLeast(dp(80))
         })
-        view.contentDescription = "$message. Tap or hold to dismiss."
+        view.contentDescription = "$message. Tap or swipe to dismiss. Hold to snooze this session."
         view.setOnClickListener { hide() }
-        view.setOnLongClickListener { hide(); true }
+        view.setOnLongClickListener { if (!preview) snoozed = true; hide(); true }
+        var downX = 0f
+        var downY = 0f
+        view.setOnTouchListener { target, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> { downX = event.rawX; downY = event.rawY; false }
+                MotionEvent.ACTION_MOVE -> {
+                    if (kotlin.math.abs(event.rawX - downX) > dp(32) || kotlin.math.abs(event.rawY - downY) > dp(32)) {
+                        target.cancelLongPress(); hide(); true
+                    } else false
+                }
+                else -> false
+            }
+        }
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -112,9 +134,9 @@ class ReelPillOverlay(private val context: Context, private val isReelsForegroun
             val top = displayInsets?.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.statusBars())?.top ?: dp(28)
             val camera = cutout?.boundingRects?.firstOrNull { it.top < (cutout?.safeInsetTop ?: top) && it.width() > 0 }
             val availableWidth = screenWidth()
-            val x = ((camera?.centerX() ?: availableWidth / 2) - view.width / 2)
+            val x = (((if (prefs.getBoolean("camera_aligned", true)) camera?.centerX() else null) ?: availableWidth / 2) - view.width / 2)
                 .coerceIn(dp(12), (availableWidth - view.width - dp(12)).coerceAtLeast(dp(12)))
-            val y = maxOf(top, dp(24), cutout?.safeInsetTop ?: 0, camera?.bottom ?: 0) + dp(8)
+            val y = maxOf(top, dp(24), cutout?.safeInsetTop ?: 0, camera?.bottom ?: 0) + dp(8 + prefs.getInt("offset", 0).coerceIn(0, 120))
             if (params.x == x && params.y == y) return
             params.x = x
             params.y = y
@@ -124,11 +146,19 @@ class ReelPillOverlay(private val context: Context, private val isReelsForegroun
         pill = view
         try {
             windows.addView(view, params)
-            prefs.edit().putString("last_day", day).putInt("last_count", reels).apply()
+            if (!preview) { lastCount = reels; lastShown = SystemClock.elapsedRealtime() }
             view.doOnLayout {
                 safely {
                     position(ViewCompat.getRootWindowInsets(view))
-                    if (pill === view) view.animate().alpha(1f).setDuration(160).start()
+                    if (pill === view) {
+                        if (motion) {
+                            view.pivotX = view.width / 2f
+                            view.scaleX = .15f; view.scaleY = .6f
+                            view.animate().alpha(1f).scaleX(1f).scaleY(1f)
+                                .setInterpolator(OvershootInterpolator(.65f)).setDuration(280).start()
+                        } else view.alpha = 1f
+                        if (prefs.getBoolean("haptics", false)) view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                    }
                 }
             }
             ViewCompat.requestApplyInsets(view)
@@ -136,16 +166,16 @@ class ReelPillOverlay(private val context: Context, private val isReelsForegroun
                 override fun run() {
                     if (pill !== view) return
                     safely {
-                        if (!enabled(context) || !isReelsForeground()) hide()
+                        if (!enabled(context) || (!preview && !isReelsForeground())) hide()
                         else handler.postDelayed(this, 250L)
                     }
                 }
             }, 250L)
             handler.postDelayed({
                 safely {
-                    if (pill === view) view.animate().alpha(0f).setDuration(140).withEndAction { if (pill === view) hide() }.start()
+                    if (pill === view) view.animate().alpha(0f).setDuration(if (motion) 140 else 0).withEndAction { if (pill === view) hide() }.start()
                 }
-            }, 3_000L)
+            }, 2_000L)
         } catch (_: RuntimeException) { hide() }
     }
 
@@ -168,13 +198,13 @@ class ReelPillOverlay(private val context: Context, private val isReelsForegroun
     companion object {
         fun preferences(context: Context): SharedPreferences = context.getSharedPreferences("doomly_reel_pill", Context.MODE_PRIVATE)
         fun enabled(context: Context): Boolean = preferences(context).getBoolean("enabled", false) && Settings.canDrawOverlays(context)
-        private fun appreciation(reels: Int): String = when ((reels / 10 - 1) % 6) {
-            0 -> "A fine start."
-            1 -> "Research noted."
-            2 -> "Well observed."
-            3 -> "Solid fieldwork."
-            4 -> "A respectable detour."
-            else -> "Nicely done."
+        private fun appreciation(reels: Int): String = when {
+            reels >= 100 -> "Doom, expertly done."
+            reels >= 50 -> "One more masterpiece?"
+            reels == 40 -> "Your thumb has talent."
+            reels == 30 -> "Keep the Reels rolling."
+            reels == 20 -> "Excellent scrolling."
+            else -> "A promising scroll."
         }
     }
 }

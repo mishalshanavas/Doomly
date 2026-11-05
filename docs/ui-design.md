@@ -103,3 +103,7 @@ or permission revocation. It never takes keyboard focus or covers the whole scre
 The service removes its window and callbacks on interruption or destruction. Daily
 milestones are deduplicated across service restarts; old milestones are not replayed.
 Device testing is needed for manufacturer-specific cutout and overlay behavior.
+
+### Mochi coach and session celebrations
+
+Mochi is a small mint vector character shared by the Home coaching corner and the charcoal overlay. The coach uses playful Reel encouragement. Celebrations count confirmed Reels within the current Instagram session, appear every ten Reels with a 30-second cooldown, and disappear after two seconds. Tap or swipe dismisses; holding snoozes until a new session. Profile provides a real overlay preview, camera/centre alignment, additional vertical spacing, optional haptics (off by default), and reduced motion. System-disabled animations are respected. Preview does not consume session milestones. Physical-device checks remain necessary for OEM cutout placement, gestures, and haptics.

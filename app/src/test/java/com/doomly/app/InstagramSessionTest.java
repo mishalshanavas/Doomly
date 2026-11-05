@@ -33,6 +33,19 @@ public class InstagramSessionTest {
         session.cancel();
         assertEquals(0, session.finish());
     }
+    @Test public void reelMilestonesResetBetweenSessions() {
+        InstagramSession session = new InstagramSession();
+        session.recordReel();
+        assertEquals(0, session.reelCount());
+        session.observeForeground(0);
+        for (int i = 0; i < 10; i++) session.recordReel();
+        assertEquals(10, session.reelCount());
+        session.observeForeground(20_000);
+        assertEquals(0, session.reelCount());
+        session.recordReel();
+        session.finish();
+        assertEquals(0, session.reelCount());
+    }
     private void observeFor(InstagramSession session, long start, long duration) {
         for (long elapsed = 5_000L; elapsed <= duration; elapsed += 5_000L) session.observeForeground(start + elapsed);
     }

@@ -40,7 +40,11 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
     val start = remember { if (ready) Route.HOME else Route.PERMISSIONS }
     LaunchedEffect(ready, notificationDestination) {
         if (ready && notificationDestination in listOf(Route.HOME, Route.PROFILE)) {
-            nav.navigate(notificationDestination!!) { launchSingleTop = true }
+            nav.navigate(notificationDestination!!) {
+                popUpTo(Route.HOME) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
             onNotificationHandled()
         }
     }

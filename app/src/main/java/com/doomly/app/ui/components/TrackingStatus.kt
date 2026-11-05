@@ -30,8 +30,12 @@ fun TrackingStatus(refreshKey: Int = 0) {
 @Composable
 fun TrackingDisclosure(onDismiss: () -> Unit) {
     val context = LocalContext.current
+    var settingsError by remember { mutableStateOf(false) }
     AlertDialog(onDismissRequest = onDismiss, title = { Text("Before enabling Reel recognition") },
-        text = { Text("Doomly uses Android Accessibility to inspect visible Instagram screen labels and controls to recognize Reels. It creates a short local fingerprint from visible creator and caption text to avoid duplicate counts. Original screen text is not stored or uploaded; only aggregate Reel counts sync when you sign in. Doomly does not tap, type, message, or control Instagram. It also checks whether Instagram remains in the foreground to identify long sessions and offer optional Reel reminders. Content from other apps is never read. If you enable Reel celebrations, a small overlay appears at each 10-Reel milestone while Reels are visible. You can disable tracking in Android Settings anytime.") },
-        confirmButton = { TextButton(onClick = { onDismiss(); context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) { Text("I understand—open Settings") } },
+        text = { Text(if (settingsError) "Couldn’t open Settings. Open Android Settings → Accessibility → Doomly to enable tracking, or choose Not now." else "Doomly uses Android Accessibility to inspect visible Instagram screen labels and controls to recognize Reels. It creates a short local fingerprint from visible creator and caption text to avoid duplicate counts. Original screen text is not stored or uploaded; only aggregate Reel counts sync when you sign in. Doomly does not tap, type, message, or control Instagram. It also checks whether Instagram remains in the foreground to identify long sessions and offer optional Reel reminders. Content from other apps is never read. If you enable Reel celebrations, a small overlay appears at each 10-Reel milestone while Reels are visible. You can disable tracking in Android Settings anytime.") },
+        confirmButton = { TextButton(onClick = {
+            try { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); onDismiss() }
+            catch (_: RuntimeException) { settingsError = true }
+        }) { Text("I understand—open Settings") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Not now") } })
 }

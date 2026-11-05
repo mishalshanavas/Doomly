@@ -47,7 +47,7 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
         Text("Step ${step + 1} of 3", style = MaterialTheme.typography.labelMedium, color = Muted)
         Spacer(Modifier.height(12.dp))
         PremiumCard(Modifier.fillMaxWidth()) {
-            Text(when(step) { 0 -> "Choose your first daily goal"; 1 -> "Let Doomly count your Reels"; else -> "Want milestone celebrations?" }, style = MaterialTheme.typography.titleLarge)
+            Text(when(step) { 0 -> "Choose your first daily goal"; 1 -> "Let Doomly count your Reels"; else -> "Want notifications?" }, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(12.dp))
             Text(when(step) { 0 -> "Your thumb, your ambition. You can change this anytime."; 1 -> "Tracking is optional. Your history stays available even when it's paused."; else -> "Notifications are optional. You can change them later in Profile." }, style = MaterialTheme.typography.bodyMedium, color = Muted)
             if (step == 0) {

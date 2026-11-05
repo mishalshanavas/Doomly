@@ -159,7 +159,9 @@ public class DoomlyAccessibilityService extends AccessibilityService {
 
     private void observeInstagramSession(long now) {
         boolean alreadyActive = instagramSession.active();
+        boolean newSession = !alreadyActive || instagramSession.stale(now);
         instagramSession.observeForeground(now);
+        if (newSession) reelPill.beginSession();
         possibleInstagramExitAt = 0;
         missingSessionWindows = 0;
         if (!alreadyActive) {
@@ -267,7 +269,7 @@ public class DoomlyAccessibilityService extends AccessibilityService {
 
             DoomStatsStore.Snapshot snapshot = DoomStatsStore.recordReel(this);
             instagramSession.recordReel();
-            reelPill.showIfMilestone(snapshot.todayReels);
+            reelPill.showIfMilestone(instagramSession.reelCount());
             RecentActivityLog.record(this, 1);
             MotivationNotifier.celebrateIfNeeded(this, snapshot);
             recentlyCounted.remember(fingerprint, wallClockNow);
