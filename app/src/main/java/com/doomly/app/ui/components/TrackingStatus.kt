@@ -16,6 +16,9 @@ fun TrackingStatus(refreshKey: Int = 0) {
     val context = LocalContext.current
     var disclosure by remember { mutableStateOf(false) }
     val tracking = remember(refreshKey) { DeviceReadiness.accessibilityEnabled(context) }
+    if (tracking) {
+        Text("● Tracking enabled · Instagram Reels", style = MaterialTheme.typography.bodySmall, color = Muted)
+    }
     if (!tracking) {
         PremiumCard(Modifier.fillMaxWidth()) {
             Text("Tracking paused", style = MaterialTheme.typography.titleMedium)

@@ -75,18 +75,23 @@ class GitHubUpdateManager(context: Context) {
                         }
                         try {
                             val payload = response.body?.string().orEmpty()
-                            val json = if (payload.trimStart().startsWith("[")) {
+                            val candidates = if (payload.trimStart().startsWith("[")) {
                                 val releases = JSONArray(payload)
                                 (0 until releases.length()).map { releases.getJSONObject(it) }
-                                    .first { !it.optBoolean("draft") }
-                            } else JSONObject(payload)
-                            val release = parseRelease(json)
-                            val state = if (Regex("Build code: ([0-9]+)").find(json.optString("body"))?.groupValues?.get(1)?.toLongOrNull()?.let { it > BuildConfig.VERSION_CODE } ?: UpdateVersionPolicy.isNewer(release.versionName, BuildConfig.VERSION_NAME)) {
-                                val cached = matchingCachedApk(release)
-                                if (cached != null) UpdateState.ReadyToInstall(release, cached) else UpdateState.Available(release)
-                            } else {
-                                UpdateState.UpToDate
+                            } else listOf(JSONObject(payload))
+                            val candidate = candidates.filter { !it.optBoolean("draft") }.mapNotNull { json ->
+                                runCatching { json to parseRelease(json) }.getOrNull()
+                            }.filter { (json, release) ->
+                                UpdateCandidatePolicy.isNewer(json.optString("body"), release.versionName,
+                                    BuildConfig.VERSION_CODE.toLong(), BuildConfig.VERSION_NAME)
+                            }.maxByOrNull { (json, _) -> UpdateCandidatePolicy.buildCode(json.optString("body")) }
+                            if (candidate == null) {
+                                post(onState, UpdateState.UpToDate)
+                                return
                             }
+                            val (_, release) = candidate
+                            val cached = matchingCachedApk(release)
+                            val state = if (cached != null) UpdateState.ReadyToInstall(release, cached) else UpdateState.Available(release)
                             post(onState, state)
                         } catch (_: Exception) {
                             post(onState, UpdateState.Failed("The release information was invalid."))

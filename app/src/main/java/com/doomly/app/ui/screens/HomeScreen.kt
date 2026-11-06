@@ -77,7 +77,7 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
             goalFeedback = "Daily goal updated."
             CloudSyncScheduler.updateDailyTarget(context, goalText.toIntOrNull()?.coerceIn(1, 20_000) ?: target, object : ResultCallback<Void> {
                 override fun onSuccess(value: Void?) = Unit
-                override fun onError(message: String) = Unit
+                override fun onError(message: String) { goalFeedback = "Target saved on this device. Cloud sync will retry later."; CloudSyncScheduler.scheduleSync(context) }
             })
             viewModel.refresh()
             editGoal = false
@@ -89,17 +89,10 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
     val history = DoomStatsStore.dailyHistory(context)
     Column(Modifier.fillMaxSize().background(Void).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
         Spacer(Modifier.height(26.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) { TurnHeader("The daily scroll.", "A little less serious. A little more you.") }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.LocalFireDepartment, null, tint = Muted, modifier = Modifier.size(17.dp))
-                Spacer(Modifier.width(5.dp))
-                Text("$streak-day streak", style = MaterialTheme.typography.bodySmall, color = Frost)
-            }
-        }
-        Spacer(Modifier.height(24.dp))
-        WeekStrip(history, reels)
-        Spacer(Modifier.height(24.dp))
+        TurnHeader("Doomly", "Make a sport of doing nothing.")
+        Spacer(Modifier.height(16.dp))
+        Text("$streak-day streak · Instagram Reels", style = MaterialTheme.typography.bodySmall, color = Muted)
+        Spacer(Modifier.height(20.dp))
         TrackingStatus(resumeCount)
         Spacer(Modifier.height(16.dp))
         Column(Modifier.fillMaxWidth().background(Panel, androidx.compose.foundation.shape.RoundedCornerShape(28.dp)).padding(24.dp)) {
@@ -113,7 +106,7 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
                 modifier = Modifier.fillMaxWidth().height(4.dp), color = Mint, trackColor = PanelRaised)
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("Daily goal · $target", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = Muted)
+                Text("Target · $target${if (reels >= target) " · reached" else ""}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = Muted)
                 TextButton(onClick = { goalText = target.toString(); editGoal = true }) { Text("Adjust goal") }
             }
         }
@@ -122,7 +115,21 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
         MilestonePop(milestone, celebrationEvent)
         goalFeedback?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Muted,
             modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }) }
-        NothingBreak()
+        Spacer(Modifier.height(20.dp))
+        ScrollCompanion(reels)
+        Spacer(Modifier.height(24.dp))
+        Text("YOUR WEEK", style = MaterialTheme.typography.labelSmall, color = Muted)
+        Spacer(Modifier.height(12.dp))
+        WeekStrip(history, reels)
+        Spacer(Modifier.height(12.dp))
+        OutlinedButton(onClick = {
+            val share = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(android.content.Intent.EXTRA_TEXT, "My Doomly daily score: $reels Instagram Reels. ${ScrollLevel.forCount(reels).title}. A very busy thumb.")
+            }
+            try { context.startActivity(android.content.Intent.createChooser(share, "Share your score")) }
+            catch (_: android.content.ActivityNotFoundException) { goalFeedback = "No sharing app is available." }
+        }, modifier = Modifier.fillMaxWidth()) { Text("Share today's score") }
         MinorDetour(onOpenInstagram = {
             CloudSyncScheduler.scheduleSync(context)
             (context.findActivity() as? MainActivity)?.openInstagram()
@@ -132,28 +139,17 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
 }
 
 @Composable
-private fun HomeMetric(label: String, value: String, modifier: Modifier = Modifier,
-                       scale: Float = 1f, primary: Boolean = false) {
-    Column(modifier.padding(top = 22.dp, bottom = 22.dp)) {
-        Text(label, style = MaterialTheme.typography.bodySmall, color = Muted)
-        Spacer(Modifier.height(12.dp))
-        Text(value, style = if (primary) MaterialTheme.typography.displayMedium else MaterialTheme.typography.headlineLarge,
-            color = Frost, modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale })
-    }
-}
-
-@Composable
 private fun GoalDialog(value: String, onValue: (String) -> Unit, onSave: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Set a daily goal") },
+        title = { Text("Set your daily target") },
         text = {
             OutlinedTextField(
                 value = value,
                 onValueChange = { onValue(it.filter(Char::isDigit).take(5)) },
                 label = { Text("Reels per day") },
                 supportingText = { Text(if (value.isNotEmpty() && value.toIntOrNull() !in 1..20_000)
-                    "Enter a number from 1 to 20,000." else "You can change this anytime.") },
+                    "Enter a number from 1 to 20,000." else "A score to aim for. Tracking continues past your target.") },
                 isError = value.isNotEmpty() && value.toIntOrNull() !in 1..20_000,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true

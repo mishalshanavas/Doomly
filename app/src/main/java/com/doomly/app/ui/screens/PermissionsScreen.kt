@@ -27,7 +27,7 @@ import com.doomly.app.ui.theme.*
 fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
     val context = LocalContext.current
     var step by rememberSaveable { mutableIntStateOf(0) }
-    var goal by rememberSaveable { mutableStateOf("") }
+    var goal by rememberSaveable { mutableStateOf(DoomStatsStore.DEFAULT_DAILY_TARGET.toString()) }
     var disclosure by rememberSaveable { mutableStateOf(false) }
     var denied by rememberSaveable { mutableStateOf(false) }
     fun finish() { SetupPreferences.finish(context); onDone() }
@@ -40,16 +40,16 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
     }
     Column(Modifier.fillMaxSize().background(Void).verticalScroll(rememberScrollState()).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally) {
-        TurnHeader("Meet Doomly.", "A soft spot for your scrolling habit.")
+        TurnHeader("Meet Doomly.", "Your scrolling, with a scoreboard.")
         Spacer(Modifier.height(24.dp))
-        BoardArt(com.doomly.app.R.drawable.board_pawn, Modifier.size(90.dp))
+        ScrollCompanion(0)
         Spacer(Modifier.height(20.dp))
-        Text("Step ${step + 1} of 3", style = MaterialTheme.typography.labelMedium, color = Muted)
+        Text("SETUP · ${step + 1} / 3", style = MaterialTheme.typography.labelMedium, color = Muted)
         Spacer(Modifier.height(12.dp))
         PremiumCard(Modifier.fillMaxWidth()) {
-            Text(when(step) { 0 -> "Choose your first daily goal"; 1 -> "Let Doomly count your Reels"; else -> "Want notifications?" }, style = MaterialTheme.typography.titleLarge)
+            Text(when(step) { 0 -> "Pick a score to aim for"; 1 -> "Let Doomly count your Reels"; else -> "Want notifications?" }, style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(12.dp))
-            Text(when(step) { 0 -> "Your thumb, your ambition. You can change this anytime."; 1 -> "Tracking is optional. Your history stays available even when it's paused."; else -> "Notifications are optional. You can change them later in Profile." }, style = MaterialTheme.typography.bodyMedium, color = Muted)
+            Text(when(step) { 0 -> "Count Instagram Reels, level up Mochi, and climb the daily league. Your target is a milestone; tracking carries on when you reach it."; 1 -> "Doomly recognizes Reels in the Instagram Android app. Enable Accessibility to start counting. Tracking is optional and your saved history stays available."; else -> "Notifications are optional. You can change them later in Profile." }, style = MaterialTheme.typography.bodyMedium, color = Muted)
             if (step == 0) {
                 Spacer(Modifier.height(16.dp))
                 OutlinedTextField(goal, { goal = it.filter(Char::isDigit).take(5) }, label = { Text("Reels per day") },

@@ -84,7 +84,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(26.dp))
-        PageHeader("Your little corner.", "The person behind the thumb.")
+        PageHeader("Your profile", "A small archive of great procrastination.")
         Spacer(Modifier.height(26.dp))
 
         Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(24.dp)).padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -118,12 +118,12 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Beta updates", style = MaterialTheme.typography.titleMedium)
-                    Text("Early debug builds from GitHub. May contain bugs. Android asks before installing.", style = MaterialTheme.typography.bodySmall, color = Muted)
+                    Text("Early builds from GitHub. Turning off waits for a newer stable release. Android confirms installation.", style = MaterialTheme.typography.bodySmall, color = Muted)
                 }
                 Switch(checked = beta, onCheckedChange = {
                     beta = it
                     updatePrefs.edit().putBoolean("beta", it).apply()
-                    updates?.checkNow()
+                    updates?.changeChannel()
                 }, enabled = updateState !is UpdateState.Downloading && updateState != UpdateState.Checking)
             }
             UpdateCard(
@@ -147,9 +147,19 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
             })
         }
         Spacer(Modifier.height(16.dp))
+        com.doomly.app.ui.components.TrackingStatus(resumeCount)
+        Spacer(Modifier.height(16.dp))
         ReelPillSettings(resumeCount)
         Spacer(Modifier.height(16.dp))
         NotificationSettings(resumeCount)
+        Spacer(Modifier.height(24.dp))
+        PremiumCard(Modifier.fillMaxWidth()) {
+            Text("Your data, plainly", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
+            Text("Doomly counts Instagram Reels on this device. Signing in syncs your name and aggregate counts for the league. Screen text and video content are not uploaded. Tracking can be disabled in Android Accessibility settings.", style = MaterialTheme.typography.bodySmall, color = Muted)
+        }
+        Spacer(Modifier.height(16.dp))
+        Text("Doomly ${BuildConfig.VERSION_NAME} · ${if (BuildConfig.DEBUG) "Beta / debug" else "Stable"}", style = MaterialTheme.typography.bodySmall, color = Muted)
         if (signedIn) {
             Spacer(Modifier.height(12.dp))
             OutlinedButton(

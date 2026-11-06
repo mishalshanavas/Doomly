@@ -10,11 +10,11 @@ permissions:
 
 concurrency:
   group: android-beta-publishing
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build-release:
-    name: Build signed APK and AAB
+    name: Build signed beta APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -41,8 +41,6 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          INPUT_VERSION_NAME: ${{ inputs.version_name }}
-          INPUT_VERSION_CODE: ${{ inputs.version_code }}
         run: |
           set -euo pipefail
           version_code=$(( $(date +%s) - 1577836800 ))
@@ -50,7 +48,6 @@ jobs:
           release_tag="v$version_name"
 
           echo "DOOMLY_VERSION_NAME=$version_name" >> "$GITHUB_ENV"
-          version_code=$(( $(date +%s) - 1577836800 ))
           echo "DOOMLY_VERSION_CODE=$version_code" >> "$GITHUB_ENV"
           echo "RELEASE_BASENAME=Doomly-$version_name" >> "$GITHUB_ENV"
           echo "RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
@@ -77,7 +74,7 @@ jobs:
       - name: Make Gradle executable
         run: chmod +x ./gradlew
 
-      - name: Test and build release
+      - name: Test and build debug beta
         run: ./gradlew --no-daemon testGithubDebugUnitTest assembleGithubDebug
 
       - name: Verify and stage artifacts
@@ -85,7 +82,6 @@ jobs:
         run: |
           set -euo pipefail
           apk="app/build/outputs/apk/github/debug/app-github-debug.apk"
-          aab="app/build/outputs/bundle/playRelease/app-play-release.aab"
           test -s "$apk"
 
           apksigner_path="$(find "$ANDROID_HOME/build-tools" -mindepth 2 -maxdepth 2 -type f -name apksigner | sort -V | tail -n 1)"

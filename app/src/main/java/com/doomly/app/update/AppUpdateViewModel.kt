@@ -13,6 +13,7 @@ class AppUpdateViewModel(application: Application) : AndroidViewModel(applicatio
     private val manager = GitHubUpdateManager(application)
     var state: UpdateState by mutableStateOf(UpdateState.Checking)
         private set
+    private var generation = 0
     private var busy = false
     private var autoAttemptedTag: String? = null
     private var awaitingInstallPermission = false
@@ -25,7 +26,19 @@ class AppUpdateViewModel(application: Application) : AndroidViewModel(applicatio
     fun checkNow() {
         if (!BuildConfig.ENABLE_GITHUB_UPDATES || busy) return
         busy = true
-        manager.check(::receive)
+        val request = generation
+        manager.check { if (request == generation) receive(it) }
+    }
+
+    fun changeChannel() {
+        if (state is UpdateState.Downloading) return
+        generation++
+        manager.cancel()
+        busy = false
+        autoAttemptedTag = null
+        awaitingInstallPermission = false
+        state = UpdateState.Checking
+        checkNow()
     }
 
     private fun receive(next: UpdateState) {
@@ -39,7 +52,8 @@ class AppUpdateViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun download(release: GitHubRelease) {
         busy = true
-        manager.download(release, ::receive)
+        val request = generation
+        manager.download(release) { if (request == generation) receive(it) }
     }
 
     fun onActivityResumed(activity: Activity) {

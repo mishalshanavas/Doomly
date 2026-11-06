@@ -28,7 +28,7 @@ fun YesterdayGhost(today: Int, yesterday: Int?) {
             Text(yesterday?.let { "$it Reels" } ?: "Available tomorrow", style = MaterialTheme.typography.bodySmall, color = Muted)
         }
         if (yesterday != null) Canvas(Modifier.fillMaxWidth().height(26.dp).semantics {
-            contentDescription = "Today: $today Reels. Yesterday: $yesterday Reels. Green dot is today; faint line is yesterday."
+            contentDescription = "Today: $today Reels. Yesterday: $yesterday Reels. Dot is today; faint line is yesterday."
         }) {
             val inset = 4.dp.toPx()
             val length = (size.width - inset * 2).coerceAtLeast(0f)

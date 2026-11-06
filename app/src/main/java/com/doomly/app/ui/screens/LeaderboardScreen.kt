@@ -38,7 +38,7 @@ fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel(), resumeCount: Int
 
     Column(Modifier.fillMaxSize().background(Void).padding(horizontal = 24.dp)) {
         Spacer(Modifier.height(26.dp))
-        PageHeader("The scroll club.", "Very little at stake. Plenty of bragging rights.")
+        PageHeader("The scroll club.", "More Reels. Higher rank. Fresh standings daily.")
         Spacer(Modifier.height(20.dp))
         if (signedIn && entries.isNotEmpty() && (errorTitle != null || loading)) {
             Text(if (loading) "Updating rankings…" else "Showing earlier rankings · refresh failed", style = MaterialTheme.typography.bodySmall, color = Muted)
@@ -49,7 +49,7 @@ fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel(), resumeCount: Int
                 horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Your people are here.", style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.height(8.dp))
-                Text("Sign in to put your score on today's board. Your counts stay on this device.", style = MaterialTheme.typography.bodyMedium, color = Muted)
+                Text("Sign in to share your display name and Reel totals on the daily leaderboard. Your local history stays available offline.", style = MaterialTheme.typography.bodyMedium, color = Muted)
                 Spacer(Modifier.height(16.dp))
                 SignInButton(onSuccess = { viewModel.refresh() })
             }
@@ -70,11 +70,11 @@ fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel(), resumeCount: Int
                     Spacer(Modifier.height(20.dp))
                     TextButton(onClick = { viewModel.refresh() }, enabled = !loading) { Text("Refresh rankings") }
                     if (entries.size > 3) {
-                        Text("Rankings · Reels", style = MaterialTheme.typography.labelSmall, color = Muted)
+                        Text("DAILY RANKINGS · HIGHEST COUNT FIRST", style = MaterialTheme.typography.labelSmall, color = Muted)
                         Spacer(Modifier.height(2.dp))
                     }
                 }
-                items(entries.drop(3).take(27), key = { it.uid + it.rank }) { entry -> LeaderRow(entry) }
+                items(entries.drop(3), key = { it.uid + it.rank }) { entry -> LeaderRow(entry) }
             }
         }
     }
