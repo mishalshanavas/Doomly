@@ -24,6 +24,7 @@ concurrency:
 
 jobs:
   build-release:
+    if: ${{ !contains(github.ref_name, '-beta') }}
     name: Build signed APK and AAB
     runs-on: ubuntu-latest
     timeout-minutes: 30

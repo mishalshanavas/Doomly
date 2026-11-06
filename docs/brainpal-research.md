@@ -33,3 +33,9 @@ Run `bash gradlew :app:testGithubDebugUnitTest :app:lintGithubDebug :app:assembl
 Physical-device acceptance is still required: Instagram counting on current app versions; accessibility interruption/re-enable; overnight reset; large-font and small-screen layouts; Google sign-in and live rankings; overlay placement on OEM cutouts; update install with the production certificate; and beta-to-stable migration. This workspace has no connected Android device. Passing build checks alone does not certify those flows or Play distribution readiness.
 
 Validation in this workspace: 36 unit tests passed, both debug variants packaged, and GitHub debug lint completed with 0 errors and 98 warnings. Lint warnings remain; the app is not certified production-ready. No live backend, physical-device, or production signing-key installation tests were performed.
+
+## Temporary APK publishing
+
+Use `bash scripts/push-with-apk.sh [path/to/local.apk]` after committing. It pushes master, then stages an available APK in a prerelease only if the file is at least as recent as the commit, has the correct package, is signed like the latest stable APK, and has a lower version code than the pending CI replacement. An unavailable, stale, or differently signed local APK is not published. This is a freshness check, not a proof that a local APK was built from that exact commit.
+
+The helper and beta workflow derive the same tag from the commit timestamp and use the same asset filename. CI overwrites that asset and release notes after its signed build passes. CI uses the next version code so users who installed the temporary build can upgrade. An existing release is never overwritten by the local helper. Ordinary `git push` cannot upload an APK from the developer's filesystem; it only triggers GitHub CI. Tagged stable releases continue to use the separate stable workflow.

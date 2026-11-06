@@ -43,8 +43,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          version_code=$(( $(date +%s) - 1577836800 ))
-          version_name="1.0.$version_code-beta"
+          source_code=$(( $(git show -s --format=%ct HEAD) - 1577836800 ))
+          version_code=$((source_code + 1))
+          version_name="1.0.$source_code-beta"
           release_tag="v$version_name"
 
           echo "DOOMLY_VERSION_NAME=$version_name" >> "$GITHUB_ENV"
@@ -110,7 +111,10 @@ jobs:
           tag_name: ${{ env.RELEASE_TAG }}
           target_commitish: ${{ github.sha }}
           name: Doomly ${{ env.DOOMLY_VERSION_NAME }}
-          body: "Build code: ${{ env.DOOMLY_VERSION_CODE }}"
+          body: |
+            Build code: ${{ env.DOOMLY_VERSION_CODE }}
+            APK version: ${{ env.DOOMLY_VERSION_NAME }}
+            CI build verified. Replaces the temporary local APK.
           generate_release_notes: true
           files: release-artifacts/*
           fail_on_unmatched_files: true

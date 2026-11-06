@@ -222,7 +222,8 @@ class GitHubUpdateManager(context: Context) {
 
     private fun parseRelease(json: JSONObject): GitHubRelease {
         val tag = json.getString("tag_name")
-        val version = tag.removePrefix("v")
+        val version = Regex("(?m)^APK version: ([^\r\n]+)").find(json.optString("body"))
+            ?.groupValues?.get(1)?.trim() ?: tag.removePrefix("v")
         val assets = json.getJSONArray("assets")
         var apkUrl = ""
         var apkSize = 0L
