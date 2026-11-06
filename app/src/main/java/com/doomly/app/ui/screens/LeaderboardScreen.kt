@@ -38,7 +38,7 @@ fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel(), resumeCount: Int
 
     Column(Modifier.fillMaxSize().background(Void).padding(horizontal = 24.dp)) {
         Spacer(Modifier.height(26.dp))
-        PageHeader("League")
+        PageHeader("The scroll club.", "Very little at stake. Plenty of bragging rights.")
         Spacer(Modifier.height(20.dp))
         if (signedIn && entries.isNotEmpty() && (errorTitle != null || loading)) {
             Text(if (loading) "Updating rankings…" else "Showing earlier rankings · refresh failed", style = MaterialTheme.typography.bodySmall, color = Muted)
@@ -47,7 +47,7 @@ fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel(), resumeCount: Int
         when {
             !signedIn -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Join the league", style = MaterialTheme.typography.headlineSmall)
+                Text("Your people are here.", style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.height(8.dp))
                 Text("Sign in to put your score on today's board. Your counts stay on this device.", style = MaterialTheme.typography.bodyMedium, color = Muted)
                 Spacer(Modifier.height(16.dp))
@@ -123,7 +123,7 @@ private fun LeaguePodium(entries: List<LeaderboardRepository.LeaderboardEntry>) 
 @Composable
 private fun LeaderRow(entry: LeaderboardRepository.LeaderboardEntry) {
     Row(
-        Modifier.fillMaxWidth().background(if (entry.rank <= 3) Panel else Void, RoundedCornerShape(7.dp))
+        Modifier.fillMaxWidth().background(if (entry.rank <= 3) Panel else Void, RoundedCornerShape(20.dp))
             .padding(horizontal = 12.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

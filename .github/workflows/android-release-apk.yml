@@ -2,8 +2,6 @@ name: Android Release
 
 on:
   push:
-    branches:
-      - master
     tags:
       - "v*"
   workflow_dispatch:
@@ -109,6 +107,7 @@ jobs:
           fi
 
           echo "DOOMLY_VERSION_NAME=$version_name" >> "$GITHUB_ENV"
+          version_code=$(( $(date +%s) - 1577836800 ))
           echo "DOOMLY_VERSION_CODE=$version_code" >> "$GITHUB_ENV"
           echo "RELEASE_BASENAME=Doomly-$version_name" >> "$GITHUB_ENV"
           echo "RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
@@ -170,6 +169,7 @@ jobs:
           tag_name: ${{ env.RELEASE_TAG }}
           target_commitish: ${{ github.sha }}
           name: Doomly ${{ env.DOOMLY_VERSION_NAME }}
+          body: "Build code: ${{ env.DOOMLY_VERSION_CODE }}"
           generate_release_notes: true
           files: release-artifacts/*
           fail_on_unmatched_files: true

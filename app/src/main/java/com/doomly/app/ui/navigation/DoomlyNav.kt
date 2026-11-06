@@ -55,8 +55,7 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
         bottomBar = {
             if (ready && route != Route.PERMISSIONS) {
                 Box(Modifier.fillMaxWidth().background(Void).navigationBarsPadding()) {
-                    Column {
-                        HorizontalDivider(color = Hairline)
+                    Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp).background(Panel, androidx.compose.foundation.shape.RoundedCornerShape(28.dp))) {
                         Row(Modifier.fillMaxWidth().selectableGroup().padding(horizontal = 12.dp, vertical = 4.dp)) {
                             listOf(
                                 Triple(Route.HOME, Icons.Outlined.Home, "Today"),
@@ -66,7 +65,7 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
                                 val selected = route == destination
                                 val tabColor by animateColorAsState(if (selected) Frost else Muted,
                                     tween(180), label = "Selected tab")
-                                Column(Modifier.weight(1f)
+                                Column(Modifier.weight(1f).background(if (selected) PanelRaised else Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(22.dp))
                                     .selectable(selected = selected, role = Role.Tab, onClick = {
                                         nav.navigate(destination) {
                                             popUpTo(Route.HOME) { saveState = true }

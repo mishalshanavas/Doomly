@@ -81,6 +81,7 @@ android {
             )
         }
         debug {
+            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("upload")
             isMinifyEnabled = false
         }
     }

@@ -40,7 +40,7 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
     }
     Column(Modifier.fillMaxSize().background(Void).verticalScroll(rememberScrollState()).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally) {
-        TurnHeader("Hello, player.")
+        TurnHeader("Meet Doomly.", "A soft spot for your scrolling habit.")
         Spacer(Modifier.height(24.dp))
         BoardArt(com.doomly.app.R.drawable.board_pawn, Modifier.size(90.dp))
         Spacer(Modifier.height(20.dp))

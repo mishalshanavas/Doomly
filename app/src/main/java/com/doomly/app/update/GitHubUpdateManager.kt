@@ -15,6 +15,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import org.json.JSONObject
+import org.json.JSONArray
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -55,7 +56,7 @@ class GitHubUpdateManager(context: Context) {
         activeCall?.cancel()
         onState(UpdateState.Checking)
         val request = Request.Builder()
-            .url(LATEST_RELEASE_API)
+            .url(if (appContext.getSharedPreferences("updates", Context.MODE_PRIVATE).getBoolean("beta", false)) LATEST_RELEASE_API.removeSuffix("/latest") + "?per_page=30" else LATEST_RELEASE_API)
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
             .header("User-Agent", "Doomly/${BuildConfig.VERSION_NAME}")
@@ -73,9 +74,14 @@ class GitHubUpdateManager(context: Context) {
                             return
                         }
                         try {
-                            val json = JSONObject(response.body?.string().orEmpty())
+                            val payload = response.body?.string().orEmpty()
+                            val json = if (payload.trimStart().startsWith("[")) {
+                                val releases = JSONArray(payload)
+                                (0 until releases.length()).map { releases.getJSONObject(it) }
+                                    .first { !it.optBoolean("draft") }
+                            } else JSONObject(payload)
                             val release = parseRelease(json)
-                            val state = if (UpdateVersionPolicy.isNewer(release.versionName, BuildConfig.VERSION_NAME)) {
+                            val state = if (Regex("Build code: ([0-9]+)").find(json.optString("body"))?.groupValues?.get(1)?.toLongOrNull()?.let { it > BuildConfig.VERSION_CODE } ?: UpdateVersionPolicy.isNewer(release.versionName, BuildConfig.VERSION_NAME)) {
                                 val cached = matchingCachedApk(release)
                                 if (cached != null) UpdateState.ReadyToInstall(release, cached) else UpdateState.Available(release)
                             } else {

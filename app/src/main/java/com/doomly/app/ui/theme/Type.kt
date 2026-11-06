@@ -11,10 +11,10 @@ private fun sans(weight: FontWeight, size: Int, line: Int, spacing: Float = 0f) 
     TextStyle(fontFamily = Sans, fontWeight = weight, fontSize = size.sp, lineHeight = line.sp, letterSpacing = spacing.sp)
 
 val DoomlyTypography = Typography(
-    displayLarge = sans(FontWeight.Normal, 54, 58, -1.8f),
+    displayLarge = sans(FontWeight.Normal, 76, 82, -3f),
     displayMedium = sans(FontWeight.Normal, 40, 44, -1.1f),
-    headlineLarge = sans(FontWeight.Medium, 28, 34, -.7f),
-    headlineMedium = sans(FontWeight.Medium, 28, 34, -.6f),
+    headlineLarge = TextStyle(fontFamily = FontFamily.Serif, fontSize = 32.sp, lineHeight = 38.sp),
+    headlineMedium = TextStyle(fontFamily = FontFamily.Serif, fontSize = 36.sp, lineHeight = 42.sp, letterSpacing = (-1).sp),
     headlineSmall = sans(FontWeight.Medium, 20, 26, -.3f),
     titleLarge = sans(FontWeight.Medium, 19, 25, -.2f),
     titleMedium = sans(FontWeight.Medium, 15, 21),

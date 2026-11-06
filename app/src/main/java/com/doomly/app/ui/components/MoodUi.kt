@@ -21,9 +21,9 @@ import java.time.LocalDate
 fun PremiumCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
         modifier
-            .clip(RoundedCornerShape(7.dp))
+            .clip(RoundedCornerShape(20.dp))
             .background(Panel)
-            .padding(16.dp),
+            .padding(22.dp),
         content = content
     )
 }
@@ -34,7 +34,7 @@ fun PageHeader(title: String, subtitle: String? = null, trailing: (@Composable (
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.headlineMedium, color = Frost)
             subtitle?.let {
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(8.dp))
                 Text(it, style = MaterialTheme.typography.bodySmall, color = Muted)
             }
         }

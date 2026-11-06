@@ -90,7 +90,7 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
     Column(Modifier.fillMaxSize().background(Void).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
         Spacer(Modifier.height(26.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) { TurnHeader("Today") }
+            Column(Modifier.weight(1f)) { TurnHeader("The daily scroll.", "A little less serious. A little more you.") }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.LocalFireDepartment, null, tint = Muted, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(5.dp))
@@ -101,26 +101,28 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
         WeekStrip(history, reels)
         Spacer(Modifier.height(24.dp))
         TrackingStatus(resumeCount)
-        HorizontalDivider(color = Hairline)
-        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            HomeMetric("Reels today", "$animatedReels", Modifier.weight(1f).fillMaxHeight(),
-                scale = countPop.value, primary = true)
-            Box(Modifier.fillMaxHeight().width(1.dp).background(Hairline))
-            Column(Modifier.weight(1f).padding(start = 24.dp, top = 22.dp, bottom = 12.dp)) {
-                Text("Daily goal", style = MaterialTheme.typography.bodySmall, color = Muted)
-                Spacer(Modifier.height(12.dp))
-                Text("$target", style = MaterialTheme.typography.headlineLarge, color = Frost)
-                TextButton(onClick = { goalText = target.toString(); editGoal = true }, contentPadding = PaddingValues(0.dp)) {
-                    Text("Edit", style = MaterialTheme.typography.labelMedium, color = Muted)
-                }
+        Spacer(Modifier.height(16.dp))
+        Column(Modifier.fillMaxWidth().background(Panel, androidx.compose.foundation.shape.RoundedCornerShape(28.dp)).padding(24.dp)) {
+            Text("TODAY’S TALLY", style = MaterialTheme.typography.labelSmall, color = Muted)
+            Spacer(Modifier.height(12.dp))
+            Text("$animatedReels", style = MaterialTheme.typography.displayLarge, color = Frost,
+                modifier = Modifier.graphicsLayer { scaleX = countPop.value; scaleY = countPop.value })
+            Text("Reels. One very busy thumb.", style = MaterialTheme.typography.bodyMedium, color = Muted)
+            Spacer(Modifier.height(24.dp))
+            LinearProgressIndicator(progress = { (reels.toFloat() / target).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(4.dp), color = Mint, trackColor = PanelRaised)
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Daily goal · $target", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = Muted)
+                TextButton(onClick = { goalText = target.toString(); editGoal = true }) { Text("Adjust goal") }
             }
         }
-        HorizontalDivider(color = Hairline)
         YesterdayGhost(today = reels, yesterday = history[LocalDate.now().minusDays(1).toString()])
         if (snapshot != null) DailyAchievementBadge(reels = reels, dailyGoal = target)
         MilestonePop(milestone, celebrationEvent)
         goalFeedback?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Muted,
             modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }) }
+        NothingBreak()
         MinorDetour(onOpenInstagram = {
             CloudSyncScheduler.scheduleSync(context)
             (context.findActivity() as? MainActivity)?.openInstagram()

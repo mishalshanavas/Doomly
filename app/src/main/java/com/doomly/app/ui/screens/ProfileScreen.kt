@@ -84,10 +84,10 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(26.dp))
-        PageHeader("Profile")
+        PageHeader("Your little corner.", "The person behind the thumb.")
         Spacer(Modifier.height(26.dp))
 
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(24.dp)).padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
             GeneratedAvatar(avatarSeed, Modifier.size(52.dp))
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
@@ -113,6 +113,19 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         DailyUsageHeatmap(usageHistory, Modifier.fillMaxWidth())
         if (BuildConfig.ENABLE_GITHUB_UPDATES) {
             Spacer(Modifier.height(22.dp))
+            val updatePrefs = remember { context.getSharedPreferences("updates", Context.MODE_PRIVATE) }
+            var beta by remember { mutableStateOf(updatePrefs.getBoolean("beta", false)) }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Beta updates", style = MaterialTheme.typography.titleMedium)
+                    Text("Early debug builds from GitHub. May contain bugs. Android asks before installing.", style = MaterialTheme.typography.bodySmall, color = Muted)
+                }
+                Switch(checked = beta, onCheckedChange = {
+                    beta = it
+                    updatePrefs.edit().putBoolean("beta", it).apply()
+                    updates?.checkNow()
+                }, enabled = updateState !is UpdateState.Downloading && updateState != UpdateState.Checking)
+            }
             UpdateCard(
                 state = updateState,
                 onCheck = { updates?.checkNow() },
@@ -142,7 +155,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
             OutlinedButton(
                 onClick = { confirmSignOut = true },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                shape = RoundedCornerShape(7.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Danger)
             ) {
                 Icon(Icons.AutoMirrored.Rounded.Logout, null, modifier = Modifier.size(18.dp))
@@ -223,7 +236,7 @@ private fun UpdateCard(
         }
     }
 
-    Column(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(7.dp)).padding(15.dp)) {
+    Column(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(20.dp)).padding(15.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(36.dp).background(PanelRaised, CircleShape), Alignment.Center) {
                 Icon(
@@ -244,7 +257,7 @@ private fun UpdateCard(
             onClick = action,
             enabled = enabled,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            shape = RoundedCornerShape(7.dp),
+            shape = RoundedCornerShape(20.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Frost, contentColor = Void)
         ) {
             Icon(
