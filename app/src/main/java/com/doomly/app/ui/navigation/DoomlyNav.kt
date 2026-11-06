@@ -10,6 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.foundation.background
 import androidx.compose.ui.Alignment
@@ -60,6 +61,7 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
                             listOf(
                                 Triple(Route.HOME, Icons.Outlined.Home, "Today"),
                                 Triple(Route.BOARD, Icons.Outlined.BarChart, "League"),
+                                Triple("research", Icons.Outlined.MenuBook, "Research"),
                                 Triple(Route.PROFILE, Icons.Outlined.PersonOutline, "Profile")
                             ).forEach { (destination, icon, label) ->
                                 val selected = route == destination
@@ -91,6 +93,7 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
         }
     ) { padding ->
         NavHost(nav, start, Modifier.padding(padding)) {
+            composable("research") { ResearchScreen() }
             composable(Route.HOME) { HomeScreen(resumeCount = resumeCount) }
             composable(Route.BOARD) { LeaderboardScreen(resumeCount = resumeCount) }
             composable(Route.PERMISSIONS) {
