@@ -18,6 +18,8 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.net.Uri
+import android.webkit.WebResourceError
+import android.webkit.WebResourceResponse
 import android.webkit.WebResourceRequest
 import android.widget.Toast
 import androidx.core.view.WindowCompat
@@ -64,6 +66,8 @@ fun ResearchScreen(onClose: () -> Unit = {}) {
             previousBehavior?.let { controller?.systemBarsBehavior = it }
         }
     }
+    var loginError by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(true) }
     var authenticated by remember { mutableStateOf(false) }
     var controls by remember { mutableStateOf(false) }
     var article by rememberSaveable { mutableStateOf("Quantum_entanglement") }
@@ -177,7 +181,48 @@ fun ResearchScreen(onClose: () -> Unit = {}) {
                                 settings.mediaPlaybackRequiresUserGesture = true
                                 CookieManager.getInstance().setAcceptCookie(true)
                                 webViewClient = object : WebViewClient() {
+                                    override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
+                                        loading = true
+                                        loginError = null
+                                    }
+                                    override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+                                        if (request.isForMainFrame) {
+                                            loading = false
+                                            loginError = "Instagram could not load. Check your connection and retry."
+                                        }
+                                    }
+                                    override fun onReceivedHttpError(view: WebView, request: WebResourceRequest, response: WebResourceResponse) {
+                                        if (request.isForMainFrame) {
+                                            loading = false
+                                            loginError = "Instagram returned HTTP ${response.statusCode}. Try again later."
+                                        }
+                                    }
                                     override fun onPageFinished(view: WebView, url: String) {
+                                        loading = false
+                                        if (Uri.parse(url).host == "www.instagram.com") {
+                                            // Some Instagram login layouts collapse in older WebView versions.
+                                            // Repair only zero-height ancestors of a visible login input.
+                                            view.evaluateJavascript("""
+                                                (() => {
+                                                    const repair = () => {
+                                                        const input = document.querySelector('input[type="password"]');
+                                                        if (!input) return;
+                                                        let node = input.parentElement;
+                                                        while (node) {
+                                                            if (node.getBoundingClientRect().height === 0 && getComputedStyle(node).display !== 'none') {
+                                                                node.style.setProperty('min-height', window.innerHeight + 'px', 'important');
+                                                            }
+                                                            node = node.parentElement;
+                                                        }
+                                                    };
+                                                    repair();
+                                                    if (!window.doomlyLoginRepair) {
+                                                        window.doomlyLoginRepair = new MutationObserver(repair);
+                                                        window.doomlyLoginRepair.observe(document.body, {childList:true, subtree:true});
+                                                    }
+                                                })();
+                                            """.trimIndent(), null)
+                                        }
                                         if (Uri.parse(url).host?.endsWith("instagram.com") == true) {
                                             view.evaluateJavascript("document.querySelector('a[href=\"/direct/inbox/\"]') !== null") { result ->
                                                 if (result == "true" && !authenticated) { authenticated = true; expanded = false; view.loadUrl("https://www.instagram.com/reels/") }
@@ -192,13 +237,22 @@ fun ResearchScreen(onClose: () -> Unit = {}) {
                                     }
                                 }
                                 browser = this
-                                loadUrl("https://www.instagram.com/accounts/login/")
+                                loadUrl("https://www.instagram.com/")
                             }
                         }, modifier = Modifier.fillMaxSize(), onRelease = {
                             if (browser === it) browser = null
                             it.stopLoading()
                             it.destroy()
                         })
+                    if (loading) LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
+                    loginError?.let { message ->
+                        Column(Modifier.fillMaxSize().background(Void).padding(24.dp), verticalArrangement = Arrangement.Center) {
+                            Text("Instagram unavailable", style = MaterialTheme.typography.titleLarge)
+                            Spacer(Modifier.height(12.dp))
+                            Text(message, style = MaterialTheme.typography.bodyMedium)
+                            TextButton(onClick = { loginError = null; loading = true; browser?.loadUrl("https://www.instagram.com/") }) { Text("Retry") }
+                        }
+                    }
                 }
             }
         }
