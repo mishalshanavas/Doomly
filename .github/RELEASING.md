@@ -39,10 +39,15 @@ git push origin v1.2.3
 Tag builds generate the Play `versionCode` as `major * 1,000,000 + minor *
 1,000 + patch`. Manual builds use the supplied version code.
 
-Each push to `master` directly tests and builds the signed, optimized GitHub
-APK and Play AAB, then publishes them in a stable GitHub Release.
+Each push to `master` first publishes a signed debug APK as a beta prerelease.
+After `Android Beta` succeeds, `Android Release` checks out the same commit,
+tests and builds the signed, optimized APK and Play AAB, and publishes a stable
+GitHub Release. Only after publication succeeds is that commit's temporary beta
+release removed. If the release build fails, the beta stays available.
 
-Automatic versions use `1.0.<commit timestamp minus 2020-01-01 UTC>`.
-The version code is that timestamp offset plus two, preserving compatibility
-with previously published builds. Keep manually supplied version codes
-increasing relative to automatic builds too.
+Automatic versions use `1.0.<commit timestamp minus 2020-01-01 UTC>` (with
+`-beta` for the debug build). The beta version code is that timestamp offset
+plus one; the stable build uses plus two so Android can upgrade from the beta.
+Both builds use the same upload signing key and application ID. Signing secrets
+are required for both workflows. Keep manually supplied version codes increasing
+relative to automatic builds too.
