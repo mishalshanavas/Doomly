@@ -1,11 +1,8 @@
 name: Android Release
 
 on:
-  workflow_run:
-    workflows: ["Android Beta"]
-    types: [completed]
-    branches: [master]
   push:
+    branches: [master]
     tags:
       - "v*"
   workflow_dispatch:
@@ -28,11 +25,6 @@ concurrency:
 
 jobs:
   build-release:
-    if: >-
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_repository.full_name == github.repository) ||
-      (github.event_name != 'workflow_run' && !contains(github.ref_name, '-beta'))
     name: Build signed APK and AAB
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -46,8 +38,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up JDK
         uses: actions/setup-java@v5
@@ -90,7 +80,6 @@ jobs:
             version_name="1.0.$source_code"
             version_code=$((source_code + 2))
             release_tag="v$version_name"
-            echo "BETA_RELEASE_TAG=v$version_name-beta" >> "$GITHUB_ENV"
           fi
 
           if [[ ! "$version_name" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
@@ -170,12 +159,6 @@ jobs:
           generate_release_notes: true
           files: release-artifacts/*
           fail_on_unmatched_files: true
-
-      - name: Remove temporary beta release
-        if: github.event_name == 'workflow_run'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release delete "$BETA_RELEASE_TAG" --yes
 
       - name: Remove signing material
         if: always()
