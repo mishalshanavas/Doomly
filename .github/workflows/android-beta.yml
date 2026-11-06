@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build-release:
-    name: Build signed beta APK
+    name: Build signed debug beta APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -114,7 +114,8 @@ jobs:
           body: |
             Build code: ${{ env.DOOMLY_VERSION_CODE }}
             APK version: ${{ env.DOOMLY_VERSION_NAME }}
-            CI build verified. Replaces the temporary local APK.
+            Temporary debug APK. A signed, optimized release from this commit will
+            be published automatically; this beta is removed after it succeeds.
           generate_release_notes: true
           files: release-artifacts/*
           fail_on_unmatched_files: true
