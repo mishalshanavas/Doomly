@@ -123,7 +123,7 @@ private fun LeaguePodium(entries: List<LeaderboardRepository.LeaderboardEntry>) 
 @Composable
 private fun LeaderRow(entry: LeaderboardRepository.LeaderboardEntry) {
     Row(
-        Modifier.fillMaxWidth().background(if (entry.rank <= 3) Panel else Void, RoundedCornerShape(20.dp))
+        Modifier.fillMaxWidth().background(if (entry.rank <= 3) Panel else Void, RoundedCornerShape(8.dp))
             .padding(horizontal = 12.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

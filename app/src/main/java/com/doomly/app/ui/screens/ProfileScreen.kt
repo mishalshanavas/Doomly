@@ -31,6 +31,7 @@ import com.doomly.app.ui.components.ReelPillSettings
 import com.doomly.app.ui.components.NotificationSettings
 import com.doomly.app.CloudSyncScheduler
 import com.doomly.app.ui.components.GeneratedAvatar
+import com.doomly.app.ui.components.EditorialSection
 import com.doomly.app.ui.components.PageHeader
 import com.doomly.app.ui.components.PremiumCard
 import com.doomly.app.ui.components.DailyUsageHeatmap
@@ -84,10 +85,10 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(26.dp))
-        PageHeader("Your profile", "A small archive of great procrastination.")
+        PageHeader("Your archive.", "A small archive of great procrastination.")
         Spacer(Modifier.height(26.dp))
 
-        Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(24.dp)).padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(12.dp)).padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
             GeneratedAvatar(avatarSeed, Modifier.size(52.dp))
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
@@ -110,6 +111,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         }
         HorizontalDivider(color = Hairline)
         Spacer(Modifier.height(24.dp))
+        EditorialSection("01", "BY THE NUMBERS")
         DailyUsageHeatmap(usageHistory, Modifier.fillMaxWidth())
         if (BuildConfig.ENABLE_GITHUB_UPDATES) {
             Spacer(Modifier.height(22.dp))
@@ -149,6 +151,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         Spacer(Modifier.height(16.dp))
         com.doomly.app.ui.components.TrackingStatus(resumeCount)
         Spacer(Modifier.height(16.dp))
+        EditorialSection("02", "MAKE IT YOURS")
         ReelPillSettings(resumeCount)
         Spacer(Modifier.height(16.dp))
         NotificationSettings(resumeCount)
@@ -165,7 +168,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
             OutlinedButton(
                 onClick = { confirmSignOut = true },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Danger)
             ) {
                 Icon(Icons.AutoMirrored.Rounded.Logout, null, modifier = Modifier.size(18.dp))
@@ -246,7 +249,7 @@ private fun UpdateCard(
         }
     }
 
-    Column(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(20.dp)).padding(15.dp)) {
+    Column(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(8.dp)).padding(15.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(36.dp).background(PanelRaised, CircleShape), Alignment.Center) {
                 Icon(
@@ -267,7 +270,7 @@ private fun UpdateCard(
             onClick = action,
             enabled = enabled,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Frost, contentColor = Void)
         ) {
             Icon(

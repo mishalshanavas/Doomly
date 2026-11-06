@@ -23,7 +23,7 @@ fun ScrollCompanion(reels: Int, modifier: Modifier = Modifier) {
     val ink = Frost
     val paper = Void
     val accent = Mint
-    Column(modifier.fillMaxWidth().background(Panel, RoundedCornerShape(24.dp)).padding(20.dp)) {
+    Column(modifier.fillMaxWidth().background(PanelRaised, RoundedCornerShape(12.dp)).padding(20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Canvas(Modifier.size(76.dp)) {
                 val w = size.width

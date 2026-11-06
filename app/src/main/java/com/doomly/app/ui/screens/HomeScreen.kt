@@ -89,18 +89,18 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
     val history = DoomStatsStore.dailyHistory(context)
     Column(Modifier.fillMaxSize().background(Void).verticalScroll(rememberScrollState()).padding(horizontal = 24.dp)) {
         Spacer(Modifier.height(26.dp))
-        TurnHeader("Doomly", "Make a sport of doing nothing.")
+        TurnHeader("Doomly.", "The fine art of one more Reel.")
         Spacer(Modifier.height(16.dp))
         Text("$streak-day streak · Instagram Reels", style = MaterialTheme.typography.bodySmall, color = Muted)
         Spacer(Modifier.height(20.dp))
         TrackingStatus(resumeCount)
         Spacer(Modifier.height(16.dp))
-        Column(Modifier.fillMaxWidth().background(Panel, androidx.compose.foundation.shape.RoundedCornerShape(28.dp)).padding(24.dp)) {
+        Column(Modifier.fillMaxWidth().background(Panel, androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).padding(24.dp)) {
             Text("TODAY’S TALLY", style = MaterialTheme.typography.labelSmall, color = Muted)
             Spacer(Modifier.height(12.dp))
-            Text("$animatedReels", style = MaterialTheme.typography.displayLarge, color = Frost,
+            Text(if (snapshot == null) "—" else "$animatedReels", style = MaterialTheme.typography.displayLarge, color = Frost,
                 modifier = Modifier.graphicsLayer { scaleX = countPop.value; scaleY = countPop.value })
-            Text("Reels. One very busy thumb.", style = MaterialTheme.typography.bodyMedium, color = Muted)
+            Text(if (snapshot == null) "Loading your daily tally…" else "Reels. One very busy thumb.", style = MaterialTheme.typography.bodyMedium, color = Muted)
             Spacer(Modifier.height(24.dp))
             LinearProgressIndicator(progress = { (reels.toFloat() / target).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(4.dp), color = Mint, trackColor = PanelRaised)
@@ -116,9 +116,10 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
         goalFeedback?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Muted,
             modifier = Modifier.semantics { liveRegion = androidx.compose.ui.semantics.LiveRegionMode.Polite }) }
         Spacer(Modifier.height(20.dp))
+        EditorialSection("01", "YOUR SCROLL COMPANION")
         ScrollCompanion(reels)
         Spacer(Modifier.height(24.dp))
-        Text("YOUR WEEK", style = MaterialTheme.typography.labelSmall, color = Muted)
+        EditorialSection("02", "THE WEEK IN SCROLLS")
         Spacer(Modifier.height(12.dp))
         WeekStrip(history, reels)
         Spacer(Modifier.height(12.dp))

@@ -10,7 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BarChart
-import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.foundation.background
 import androidx.compose.ui.Alignment
@@ -52,22 +52,23 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
 
     Scaffold(
         containerColor = Void,
-        topBar = { if (updates != null) UpdateBanner(updates.state, onInstallUpdate) },
+        topBar = { if (updates != null && route != "research") UpdateBanner(updates.state, onInstallUpdate) },
         bottomBar = {
-            if (ready && route != Route.PERMISSIONS) {
+            if (ready && route != Route.PERMISSIONS && route != "research") {
                 Box(Modifier.fillMaxWidth().background(Void).navigationBarsPadding()) {
-                    Column(Modifier.padding(horizontal = 20.dp, vertical = 10.dp).background(Panel, androidx.compose.foundation.shape.RoundedCornerShape(28.dp))) {
+                    Column(Modifier.widthIn(max = 760.dp).fillMaxWidth().align(Alignment.Center).padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        HorizontalDivider(color = Hairline)
                         Row(Modifier.fillMaxWidth().selectableGroup().padding(horizontal = 12.dp, vertical = 4.dp)) {
                             listOf(
                                 Triple(Route.HOME, Icons.Outlined.Home, "Today"),
                                 Triple(Route.BOARD, Icons.Outlined.BarChart, "League"),
-                                Triple("research", Icons.Outlined.MenuBook, "Research"),
+                                Triple("research", Icons.AutoMirrored.Outlined.MenuBook, "Research"),
                                 Triple(Route.PROFILE, Icons.Outlined.PersonOutline, "Profile")
                             ).forEach { (destination, icon, label) ->
                                 val selected = route == destination
-                                val tabColor by animateColorAsState(if (selected) Frost else Muted,
+                                val tabColor by animateColorAsState(if (selected) Acid else Muted,
                                     tween(180), label = "Selected tab")
-                                Column(Modifier.weight(1f).background(if (selected) PanelRaised else Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(22.dp))
+                                Column(Modifier.weight(1f).background(Color.Transparent, androidx.compose.foundation.shape.RoundedCornerShape(22.dp))
                                     .selectable(selected = selected, role = Role.Tab, onClick = {
                                         nav.navigate(destination) {
                                             popUpTo(Route.HOME) { saveState = true }
@@ -83,7 +84,7 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
                                         fontWeight = FontWeight.Medium,
                                         color = tabColor)
                                     Spacer(Modifier.height(4.dp))
-                                    Box(Modifier.size(3.dp).background(if (selected) Mint else Color.Transparent, androidx.compose.foundation.shape.CircleShape))
+                                    Box(Modifier.width(24.dp).height(3.dp).background(if (selected) Mint else Color.Transparent))
                                 }
                             }
                         }
@@ -92,8 +93,9 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
             }
         }
     ) { padding ->
-        NavHost(nav, start, Modifier.padding(padding)) {
-            composable("research") { ResearchScreen() }
+        Box(Modifier.fillMaxSize().background(Void).padding(padding), contentAlignment = Alignment.TopCenter) {
+        NavHost(nav, start, if (route == "research") Modifier.fillMaxSize() else Modifier.widthIn(max = 760.dp).fillMaxSize()) {
+            composable("research") { ResearchScreen(onClose = { nav.popBackStack() }) }
             composable(Route.HOME) { HomeScreen(resumeCount = resumeCount) }
             composable(Route.BOARD) { LeaderboardScreen(resumeCount = resumeCount) }
             composable(Route.PERMISSIONS) {
@@ -103,6 +105,7 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
                 })
             }
             composable(Route.PROFILE) { ProfileScreen(resumeCount = resumeCount, updates = updates, onInstallUpdate = onInstallUpdate) }
+        }
         }
     }
 }

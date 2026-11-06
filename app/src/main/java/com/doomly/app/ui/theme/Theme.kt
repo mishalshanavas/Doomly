@@ -2,6 +2,9 @@ package com.doomly.app.ui.theme
 
 import android.app.Activity
 import android.os.Build
+import androidx.compose.material3.Shapes
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -16,7 +19,7 @@ private val LightScheme = lightColorScheme(
     primaryContainer = LightPanelRaised, onPrimaryContainer = LightFrost,
     secondary = LightSmoke, onSecondary = LightVoid,
     secondaryContainer = LightPanel, onSecondaryContainer = LightFrost,
-    tertiary = DoomlyMint, onTertiary = LightFrost,
+    tertiary = DoomlyMint, onTertiary = LightVoid,
     background = LightVoid, onBackground = LightFrost,
     surface = LightVoid, onSurface = LightFrost,
     surfaceVariant = LightPanel, onSurfaceVariant = LightSmoke,
@@ -29,7 +32,7 @@ private val DarkScheme = darkColorScheme(
     primaryContainer = DarkPanelRaised, onPrimaryContainer = DarkFrost,
     secondary = DarkSmoke, onSecondary = DarkVoid,
     secondaryContainer = DarkPanel, onSecondaryContainer = DarkFrost,
-    tertiary = DoomlyMint, onTertiary = DarkVoid,
+    tertiary = Color(0xFFECA18A), onTertiary = DarkVoid,
     background = DarkVoid, onBackground = DarkFrost,
     surface = DarkVoid, onSurface = DarkFrost,
     surfaceVariant = DarkPanel, onSurfaceVariant = DarkSmoke,
@@ -56,6 +59,7 @@ fun DoomlyTheme(
     MaterialTheme(
         colorScheme = if (darkTheme) DarkScheme else LightScheme,
         typography = DoomlyTypography,
+        shapes = Shapes(extraSmall = RoundedCornerShape(4.dp), small = RoundedCornerShape(8.dp), medium = RoundedCornerShape(12.dp), large = RoundedCornerShape(16.dp), extraLarge = RoundedCornerShape(20.dp)),
         content = content
     )
 }

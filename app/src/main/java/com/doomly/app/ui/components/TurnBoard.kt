@@ -25,7 +25,7 @@ import java.util.Locale
 fun TurnHeader(title: String, subtitle: String? = null) {
     Text(LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE, MMM d", Locale.getDefault())),
         style = MaterialTheme.typography.labelSmall, color = Frost)
-    Spacer(Modifier.height(5.dp))
+    Spacer(Modifier.height(12.dp))
     PageHeader(title, subtitle)
 }
 
@@ -48,7 +48,7 @@ fun WeekStrip(history: Map<String, Int>, todayCount: Int) {
                     Text("${date.dayOfMonth}", style = MaterialTheme.typography.bodyMedium,
                         color = if (current) Void else if (date <= today) Frost else Muted)
                 }
-                Spacer(Modifier.height(5.dp))
+                Spacer(Modifier.height(12.dp))
                 Box(Modifier.size(3.dp).clip(CircleShape).background(if (count > 0) Mint else Color.Transparent))
             }
         }
