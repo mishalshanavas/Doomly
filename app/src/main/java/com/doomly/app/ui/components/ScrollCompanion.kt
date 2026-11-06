@@ -48,12 +48,12 @@ fun ScrollCompanion(reels: Int, modifier: Modifier = Modifier) {
                 Text("MOCHI · LEVEL ${level.index + 1}", style = MaterialTheme.typography.labelSmall, color = Muted)
                 Text(level.title, style = MaterialTheme.typography.titleLarge, color = Frost)
                 Spacer(Modifier.height(4.dp))
-                Text(if (level.next == 0) "Today's final form. A magnificent thumb." else "${level.next - reels.coerceAtLeast(0)} Reels to the next look.", style = MaterialTheme.typography.bodySmall, color = Muted)
+                Text(if (level.next == 0) "Maximum level reached" else "${level.next - reels.coerceAtLeast(0)} Reels to the next look.", style = MaterialTheme.typography.bodySmall, color = Muted)
             }
         }
         Spacer(Modifier.height(16.dp))
         LinearProgressIndicator(progress = { level.progress }, modifier = Modifier.fillMaxWidth(), color = Mint, trackColor = PanelRaised)
         Spacer(Modifier.height(8.dp))
-        Text("A fresh level journey every day.", style = MaterialTheme.typography.bodySmall, color = Muted)
+        Text("Resets daily", style = MaterialTheme.typography.bodySmall, color = Muted)
     }
 }

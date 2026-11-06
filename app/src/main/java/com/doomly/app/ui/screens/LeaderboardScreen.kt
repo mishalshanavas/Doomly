@@ -38,7 +38,7 @@ fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel(), resumeCount: Int
 
     Column(Modifier.fillMaxSize().background(Void).padding(horizontal = 24.dp)) {
         Spacer(Modifier.height(26.dp))
-        PageHeader("The scroll club.", "More Reels. Higher rank. Fresh standings daily.")
+        PageHeader("League")
         Spacer(Modifier.height(20.dp))
         if (signedIn && entries.isNotEmpty() && (errorTitle != null || loading)) {
             Text(if (loading) "Updating rankings…" else "Showing earlier rankings · refresh failed", style = MaterialTheme.typography.bodySmall, color = Muted)
@@ -47,7 +47,7 @@ fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel(), resumeCount: Int
         when {
             !signedIn -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Your people are here.", style = MaterialTheme.typography.headlineSmall)
+                Text("Sign in to view rankings", style = MaterialTheme.typography.headlineSmall)
                 Spacer(Modifier.height(8.dp))
                 Text("Sign in to share your display name and Reel totals on the daily leaderboard. Your local history stays available offline.", style = MaterialTheme.typography.bodyMedium, color = Muted)
                 Spacer(Modifier.height(16.dp))
@@ -57,8 +57,8 @@ fun LeaderboardScreen(viewModel: LeagueViewModel = viewModel(), resumeCount: Int
                 CircularProgressIndicator(color = Frost, strokeWidth = 2.dp)
             }
             entries.isEmpty() -> EmptyState(
-                errorTitle ?: "The room is suspiciously quiet",
-                errorBody ?: "Watch a few Reels and claim the least competitive first place.",
+                errorTitle ?: "No rankings yet",
+                errorBody ?: "Rankings appear when activity syncs.",
                 onRetry = { viewModel.refresh() }
             )
             else -> LazyColumn(

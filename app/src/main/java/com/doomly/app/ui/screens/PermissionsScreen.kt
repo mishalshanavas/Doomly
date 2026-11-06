@@ -40,9 +40,9 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
     }
     Column(Modifier.fillMaxSize().background(Void).verticalScroll(rememberScrollState()).padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally) {
-        TurnHeader("Meet Doomly.", "Your scrolling, with a scoreboard.")
+        PageHeader("Set up Doomly")
         Spacer(Modifier.height(24.dp))
-        ScrollCompanion(0)
+
         Spacer(Modifier.height(20.dp))
         Text("SETUP · ${step + 1} / 3", style = MaterialTheme.typography.labelMedium, color = Muted)
         Spacer(Modifier.height(12.dp))

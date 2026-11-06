@@ -1,5 +1,7 @@
 package com.doomly.app
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -30,7 +32,16 @@ class MainActivity : ComponentActivity() {
         consumeNotificationIntent(intent)
 
         setContent {
-            DoomlyTheme {
+            val appearance = androidx.compose.runtime.remember { getSharedPreferences("appearance", MODE_PRIVATE) }
+            var dark by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(appearance.getBoolean("dark", false)) }
+            androidx.compose.runtime.DisposableEffect(Unit) {
+                val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+                    if (key == "dark") dark = prefs.getBoolean("dark", false)
+                }
+                appearance.registerOnSharedPreferenceChangeListener(listener)
+                onDispose { appearance.unregisterOnSharedPreferenceChangeListener(listener) }
+            }
+            DoomlyTheme(darkTheme = dark) {
                 val updateState = appUpdates.state
                 LaunchedEffect(updateState) {
                     if (updateState is UpdateState.ReadyToInstall && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) appUpdates.onActivityResumed(this@MainActivity)

@@ -85,7 +85,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(26.dp))
-        PageHeader("Your archive.", "A small archive of great procrastination.")
+        PageHeader("Profile")
         Spacer(Modifier.height(26.dp))
 
         Row(Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(12.dp)).padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -111,7 +111,9 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         }
         HorizontalDivider(color = Hairline)
         Spacer(Modifier.height(24.dp))
-        EditorialSection("01", "BY THE NUMBERS")
+        EditorialSection("", "History")
+        com.doomly.app.ui.components.ScrollCompanion(DoomStatsStore.snapshot(context).todayReels)
+        com.doomly.app.ui.components.DailyAchievementBadge(DoomStatsStore.snapshot(context).todayReels, target)
         DailyUsageHeatmap(usageHistory, Modifier.fillMaxWidth())
         if (BuildConfig.ENABLE_GITHUB_UPDATES) {
             Spacer(Modifier.height(22.dp))
@@ -140,7 +142,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         if (!signedIn) {
             Text("Join the league", style = MaterialTheme.typography.titleMedium, modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(6.dp))
-            Text("Give your thumb a place on the podium.", style = MaterialTheme.typography.bodySmall, color = Muted,
+            Text("Sign in to join the league.", style = MaterialTheme.typography.bodySmall, color = Muted,
                 modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(12.dp))
             SignInButton(onSuccess = {
@@ -151,7 +153,13 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         Spacer(Modifier.height(16.dp))
         com.doomly.app.ui.components.TrackingStatus(resumeCount)
         Spacer(Modifier.height(16.dp))
-        EditorialSection("02", "MAKE IT YOURS")
+        EditorialSection("", "Settings")
+        val appearance = remember { context.getSharedPreferences("appearance", Context.MODE_PRIVATE) }
+        var dark by remember { mutableStateOf(appearance.getBoolean("dark", false)) }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Dark appearance", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+            Switch(checked = dark, onCheckedChange = { dark = it; appearance.edit().putBoolean("dark", it).apply() })
+        }
         ReelPillSettings(resumeCount)
         Spacer(Modifier.height(16.dp))
         NotificationSettings(resumeCount)

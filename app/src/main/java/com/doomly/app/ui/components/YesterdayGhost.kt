@@ -24,7 +24,7 @@ fun YesterdayGhost(today: Int, yesterday: Int?) {
     val accent = Mint
     Column(Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 4.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Yesterday’s ghost", style = MaterialTheme.typography.bodySmall, color = Muted)
+            Text("Yesterday", style = MaterialTheme.typography.bodySmall, color = Muted)
             Text(yesterday?.let { "$it Reels" } ?: "Available tomorrow", style = MaterialTheme.typography.bodySmall, color = Muted)
         }
         if (yesterday != null) Canvas(Modifier.fillMaxWidth().height(26.dp).semantics {

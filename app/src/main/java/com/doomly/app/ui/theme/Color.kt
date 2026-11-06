@@ -5,26 +5,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 
-internal val LightVoid = Color(0xFFF8F3E7)
-internal val LightPanel = Color(0xFFEEE8D8)
-internal val LightPanelRaised = Color(0xFFE1E7D6)
-internal val LightHairline = Color(0xFFC9CABB)
-internal val LightFrost = Color(0xFF203D32)
-internal val LightSmoke = Color(0xFF5F665B)
-internal val LightDanger = Color(0xFF9F3B36)
+internal val LightVoid = Color(0xFFFFFFFF)
+internal val LightPanel = Color(0xFFE5E5E5)
+internal val LightPanelRaised = Color(0xFFDFDFDF)
+internal val LightHairline = Color(0xFFC5C5C5)
+internal val LightFrost = Color(0xFF161616)
+internal val LightSmoke = Color(0xFF666666)
+internal val LightDanger = Color(0xFF5B5B5B)
 
-internal val DarkVoid = Color(0xFF211E19)
-internal val DarkPanel = Color(0xFF2C2822)
-internal val DarkPanelRaised = Color(0xFF383229)
-internal val DarkHairline = Color(0xFF61574A)
-internal val DarkFrost = Color(0xFFF8F0E2)
-internal val DarkSmoke = Color(0xFFC0B29F)
-internal val DarkDanger = Color(0xFFFF8A80)
+internal val DarkVoid = Color(0xFF1D1D1D)
+internal val DarkPanel = Color(0xFF272727)
+internal val DarkPanelRaised = Color(0xFF313131)
+internal val DarkHairline = Color(0xFF565656)
+internal val DarkFrost = Color(0xFFEEEEEE)
+internal val DarkSmoke = Color(0xFFB0B0B0)
+internal val DarkDanger = Color(0xFFAEAEAE)
 
-internal val DoomlyMint = Color(0xFFA4472D)
-internal val DoomlyAqua = Color(0xFFE0E9DD)
-internal val DoomlyPeach = Color(0xFFEED597)
-internal val DoomlyViolet = Color(0xFFEBD6C6)
+internal val DoomlyMint = Color(0xFF222222)
+internal val DoomlyAqua = Color(0xFFE2E2E2)
+internal val DoomlyPeach = Color(0xFFC9C9C9)
+internal val DoomlyViolet = Color(0xFFD8D8D8)
 
 // Semantic tokens resolve from the active light or dark system theme.
 val Void: Color @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.background

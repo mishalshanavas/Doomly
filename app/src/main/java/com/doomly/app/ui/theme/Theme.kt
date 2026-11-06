@@ -32,7 +32,7 @@ private val DarkScheme = darkColorScheme(
     primaryContainer = DarkPanelRaised, onPrimaryContainer = DarkFrost,
     secondary = DarkSmoke, onSecondary = DarkVoid,
     secondaryContainer = DarkPanel, onSecondaryContainer = DarkFrost,
-    tertiary = Color(0xFFECA18A), onTertiary = DarkVoid,
+    tertiary = Color(0xFFDDDDDD), onTertiary = DarkVoid,
     background = DarkVoid, onBackground = DarkFrost,
     surface = DarkVoid, onSurface = DarkFrost,
     surfaceVariant = DarkPanel, onSurfaceVariant = DarkSmoke,
