@@ -2,30 +2,40 @@ package com.doomly.app.ui.components
 
 import android.content.Intent
 import android.provider.Settings
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.doomly.app.DeviceReadiness
 import com.doomly.app.ui.theme.*
 
+/** One quiet status line when tracking is on; a single actionable row when paused. */
 @Composable
 fun TrackingStatus(refreshKey: Int = 0) {
     val context = LocalContext.current
     var disclosure by remember { mutableStateOf(false) }
     val tracking = remember(refreshKey) { DeviceReadiness.accessibilityEnabled(context) }
     if (tracking) {
-        Text("● Tracking enabled · Instagram Reels", style = MaterialTheme.typography.bodySmall, color = Muted)
-    }
-    if (!tracking) {
-        PremiumCard(Modifier.fillMaxWidth()) {
-            Text("Tracking paused", style = MaterialTheme.typography.titleMedium)
-            Text("Your saved counts are safe. Enable tracking to count new Reels.", style = MaterialTheme.typography.bodySmall, color = Muted)
-            TextButton(onClick = { disclosure = true }) { Text("Enable tracking") }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(BodyAccent))
+            Spacer(Modifier.width(Spacing.sm))
+            Text("Tracking on", style = MaterialTheme.typography.bodyMedium, color = BodyMuted)
         }
-        Spacer(Modifier.height(16.dp))
+    } else {
+        GroupedSection {
+            GroupedRow(
+                "Tracking paused",
+                subtitle = "Counts are saved on this device.",
+                onClick = { disclosure = true },
+                trailing = { Text("Turn on", style = MaterialTheme.typography.titleMedium, color = BodyAccent) }
+            )
+        }
     }
     if (disclosure) TrackingDisclosure(onDismiss = { disclosure = false })
 }
@@ -34,11 +44,24 @@ fun TrackingStatus(refreshKey: Int = 0) {
 fun TrackingDisclosure(onDismiss: () -> Unit) {
     val context = LocalContext.current
     var settingsError by remember { mutableStateOf(false) }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Before enabling Reel recognition") },
-        text = { Text(if (settingsError) "Couldn’t open Settings. Open Android Settings → Accessibility → Doomly to enable tracking, or choose Not now." else "Doomly uses Android Accessibility to inspect visible Instagram screen labels and controls to recognize Reels. It creates a short local fingerprint from visible creator and caption text to avoid duplicate counts. Original screen text is not stored or uploaded; only aggregate Reel counts sync when you sign in. Doomly does not tap, type, message, or control Instagram. It also checks whether Instagram remains in the foreground to identify long sessions and offer optional Reel reminders. Content from other apps is never read. If you enable Reel celebrations, a small overlay appears at each 10-Reel milestone while Reels are visible. You can disable tracking in Android Settings anytime.") },
-        confirmButton = { TextButton(onClick = {
-            try { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); onDismiss() }
-            catch (_: RuntimeException) { settingsError = true }
-        }) { Text("I understand—open Settings") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Not now") } })
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = DoomlyShapes.extraLarge,
+        containerColor = Sheet,
+        title = { Text("Reel tracking", style = MaterialTheme.typography.headlineSmall, color = Ink) },
+        text = {
+            Text(
+                if (settingsError) "Couldn't open Settings. Open Android Settings → Accessibility → Doomly to turn on tracking, or choose Not now."
+                else "Doomly uses Accessibility to recognise Reels in Instagram. Screen text is not stored or uploaded; only totals sync if you sign in.",
+                style = MaterialTheme.typography.bodyMedium, color = Smoke
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                try { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)); onDismiss() }
+                catch (_: RuntimeException) { settingsError = true }
+            }) { Text("Open Settings", color = Ink) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Not now", color = Smoke) } }
+    )
 }

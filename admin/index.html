@@ -5,27 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Doomly admin</title>
   <style>
-    :root { color-scheme:light; --bg:#fff; --panel:#f7f7f5; --line:#383838; --text:#171717; --muted:#707070; --accent:#171717; --ink:#fff; --good:#087443; --bad:#9f3b36; }
+    :root { color-scheme:light; --bg:#f4f0e4; --panel:#ebe5d3; --line:#9a9b88; --text:#23231d; --muted:#6e6d5f; --accent:#d9381e; --ink:#fff; --good:#5c6644; --bad:#b9351b; }
     * { box-sizing:border-box; }
-    body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif; }
+    body { margin:0; min-height:100vh; background:var(--bg); background-image:radial-gradient(rgba(39,39,31,.06) 1px, transparent 1.1px); background-size:22px 22px; color:var(--text); font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif; }
     main { width:min(680px,100%); margin:0 auto; padding:64px 24px; }
     h1 { margin:0; font-size:34px; font-weight:900; letter-spacing:-.045em; text-transform:uppercase; }
-    h1 span { display:inline-block; vertical-align:middle; color:var(--text); background:#0acf70; padding:4px 8px; border:1px solid var(--line); border-radius:4px; font-size:11px; letter-spacing:.08em; margin-left:8px; }
+    h1 span { display:inline-block; vertical-align:middle; color:var(--text); background:var(--accent); color:#fff; padding:4px 8px; border:1px solid var(--accent); border-radius:0; font-size:11px; letter-spacing:.08em; margin-left:8px; }
     .sub { color:var(--muted); margin:8px 0 28px; }
-    .card { background:var(--bg); border:1px solid var(--line); border-radius:7px; padding:24px; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:0; padding:24px; }
     label { display:block; color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; margin:20px 0 7px; }
-    input,textarea { width:100%; border:1px solid #b4b4ae; border-radius:5px; background:var(--bg); color:var(--text); padding:12px 13px; font:inherit; }
+    input,textarea { width:100%; border:1px solid var(--line); border-radius:0; background:#fffdf6; color:var(--text); padding:12px 13px; font:inherit; }
     textarea { min-height:120px; resize:vertical; }
-    button { min-height:48px; border:1px solid var(--accent); border-radius:7px; background:var(--accent); color:var(--ink); padding:12px 16px; font:700 14px system-ui,sans-serif; cursor:pointer; }
-    button.secondary { background:transparent; border:1px solid var(--line); color:var(--text); }
+    button { min-height:48px; border:1px solid var(--accent); border-radius:0; background:var(--accent); color:var(--ink); padding:12px 16px; font:700 14px system-ui,sans-serif; cursor:pointer; }
+    button.secondary { background:transparent; border-color:var(--line); border:1px solid var(--line); color:var(--text); }
     button:disabled { opacity:.5; cursor:wait; }
-    :focus-visible { outline:3px solid #087443; outline-offset:3px; }
+    :focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
     .row { display:flex; gap:10px; align-items:center; justify-content:space-between; }
     .account { color:var(--muted); font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .hidden { display:none; }
     .status { margin-top:15px; min-height:24px; color:var(--muted); }
     .status.good { color:var(--good); } .status.bad { color:var(--bad); }
-    .notice { border:1px solid var(--line); border-radius:5px; background:#fff8e8; padding:13px; color:var(--muted); font-size:13px; margin-bottom:18px; }
+    .notice { border:1px solid var(--line); border-radius:0; background:#d8dcc6; padding:13px; color:var(--muted); font-size:13px; margin-bottom:18px; }
     @media (max-width:380px) { main { padding:32px 16px; } .card { padding:16px; } }
   </style>
 </head>

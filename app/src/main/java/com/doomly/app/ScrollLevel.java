@@ -14,6 +14,9 @@ public final class ScrollLevel {
         next = index == THRESHOLDS.length - 1 ? 0 : THRESHOLDS[index + 1];
         progress = next == 0 ? 1f : (float) (count - THRESHOLDS[index]) / (next - THRESHOLDS[index]);
     }
+    public static int levels() { return THRESHOLDS.length; }
+    public static int threshold(int index) { return THRESHOLDS[index]; }
+    public static String name(int index) { return NAMES[index]; }
     public static ScrollLevel forCount(int reels) {
         int count = Math.max(0, reels), level = 0;
         while (level + 1 < THRESHOLDS.length && count >= THRESHOLDS[level + 1]) level++;

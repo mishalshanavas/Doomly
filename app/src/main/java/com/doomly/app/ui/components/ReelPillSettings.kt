@@ -1,27 +1,23 @@
 package com.doomly.app.ui.components
 
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
-import com.doomly.app.R
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.doomly.app.DeviceReadiness
 import com.doomly.app.overlay.ReelPillOverlay
 import com.doomly.app.ui.theme.*
 
+/** Celebration overlay settings; details appear only once enabled and permitted. */
 @Composable
 fun ReelPillSettings(refreshKey: Int = 0) {
     val context = LocalContext.current
@@ -32,9 +28,7 @@ fun ReelPillSettings(refreshKey: Int = 0) {
     val preview = remember(context) { ReelPillOverlay(context) { true } }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(preview, lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) preview.hide()
-        }
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_PAUSE) preview.hide() }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer); preview.close() }
     }
@@ -48,53 +42,57 @@ fun ReelPillSettings(refreshKey: Int = 0) {
     var haptics by remember { mutableStateOf(prefs.getBoolean("haptics", false)) }
     var reduced by remember { mutableStateOf(prefs.getBoolean("reduce_motion", false)) }
     var offset by remember { mutableFloatStateOf(prefs.getInt("offset", 0).toFloat()) }
-    Column(Modifier.fillMaxWidth()) {
-        HorizontalDivider(color = Hairline)
-        Row(Modifier.fillMaxWidth().padding(vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Image(painterResource(R.drawable.ic_coach), "Mochi", Modifier.size(40.dp))
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("Mochi, your scroll coach", style = MaterialTheme.typography.bodyMedium, color = Frost)
-                Spacer(Modifier.height(4.dp))
-                Text("A tiny companion cheering every 10 Reels this session.", style = MaterialTheme.typography.bodySmall, color = Muted)
-            }
-            Spacer(Modifier.width(12.dp))
-            Switch(modifier = Modifier.semantics { contentDescription = "Mochi celebrations" }, checked = requested, onCheckedChange = { checked ->
+
+    SectionHeading("Celebrations")
+    GroupedSection {
+        GroupedRow("Show over Instagram", subtitle = "A short pill every 10 reels", showChevron = false, trailing = {
+            BodySwitch(requested, { checked ->
                 requested = checked
                 prefs.edit().putBoolean("enabled", checked).apply()
                 error = null
                 if (!checked) preview.hide()
                 if (checked && !Settings.canDrawOverlays(context)) requestOverlayPermission()
-            })
-        }
+            }, "Show over Instagram")
+        })
         if (requested && !permission) {
-            Text("Setup pending · allow display over other apps to activate Mochi.", style = MaterialTheme.typography.bodySmall, color = Muted)
-            TextButton(onClick = { requestOverlayPermission() }) { Text("Allow overlay") }
+            HairlineDivider()
+            GroupedRow("Allow display over other apps", onClick = { requestOverlayPermission() })
         }
         if (requested && permission && !DeviceReadiness.accessibilityEnabled(context)) {
-            Text("Tracking is paused. You can preview Mochi, but celebrations need Reel tracking.", style = MaterialTheme.typography.bodySmall, color = Muted)
-            TextButton(onClick = { trackingDisclosure = true }) { Text("Enable tracking") }
+            HairlineDivider()
+            GroupedRow("Turn on Reel tracking", subtitle = "Celebrations need tracking", onClick = { trackingDisclosure = true })
         }
         if (requested && permission) {
-            Text("Tap or swipe to dismiss. Hold to snooze for this session.", style = MaterialTheme.typography.bodySmall, color = Muted)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Align with camera", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                Switch(modifier = Modifier.semantics { contentDescription = "Align with camera" }, checked = camera, onCheckedChange = { camera = it; prefs.edit().putBoolean("camera_aligned", it).apply() })
+            HairlineDivider()
+            GroupedRow("Align with camera", showChevron = false, trailing = {
+                BodySwitch(camera, { camera = it; prefs.edit().putBoolean("camera_aligned", it).apply() }, "Align with camera")
+            })
+            HairlineDivider()
+            Column(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.md)) {
+                Text("Position", style = MaterialTheme.typography.bodyLarge, color = BodyInk)
+                Text(if (offset < 1) "Just below the camera" else "Lower on screen", style = MaterialTheme.typography.bodySmall, color = BodyMuted)
+                Slider(
+                    modifier = Modifier.semantics { contentDescription = "Overlay distance below camera" },
+                    value = offset, onValueChange = { offset = it }, valueRange = 0f..120f,
+                    onValueChangeFinished = { prefs.edit().putInt("offset", offset.toInt()).apply() },
+                    colors = SliderDefaults.colors(thumbColor = BodyInk, activeTrackColor = BodyInk, inactiveTrackColor = BodyFill)
+                )
             }
-            Text(if (offset < 1) "Position · just below camera" else "Position · lower on screen", style = MaterialTheme.typography.bodySmall, color = Muted)
-            Slider(modifier = Modifier.semantics { contentDescription = "Overlay distance below camera" }, value = offset, onValueChange = { offset = it }, valueRange = 0f..120f,
-                onValueChangeFinished = { prefs.edit().putInt("offset", offset.toInt()).apply() })
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Gentle haptics", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                Switch(modifier = Modifier.semantics { contentDescription = "Gentle haptics" }, checked = haptics, onCheckedChange = { haptics = it; prefs.edit().putBoolean("haptics", it).apply() })
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Reduce motion", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                Switch(modifier = Modifier.semantics { contentDescription = "Reduce motion" }, checked = reduced, onCheckedChange = { reduced = it; prefs.edit().putBoolean("reduce_motion", it).apply() })
-            }
-            TextButton(onClick = { preview.preview() }) { Text("Preview Mochi") }
+            HairlineDivider()
+            GroupedRow("Haptics", showChevron = false, trailing = {
+                BodySwitch(haptics, { haptics = it; prefs.edit().putBoolean("haptics", it).apply() }, "Haptics")
+            })
+            HairlineDivider()
+            GroupedRow("Reduce motion", showChevron = false, trailing = {
+                BodySwitch(reduced, { reduced = it; prefs.edit().putBoolean("reduce_motion", it).apply() }, "Reduce motion")
+            })
+            HairlineDivider()
+            GroupedRow("Preview", onClick = { preview.preview() })
         }
-        error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Danger) }
+        error?.let {
+            HairlineDivider()
+            Text(it, style = MaterialTheme.typography.bodySmall, color = BodyDanger, modifier = Modifier.padding(Spacing.lg))
+        }
     }
     if (trackingDisclosure) TrackingDisclosure { trackingDisclosure = false }
 }

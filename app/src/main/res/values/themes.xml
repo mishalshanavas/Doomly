@@ -1,24 +1,10 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Legacy surfaces match the white game board. -->
-    <style name="Theme.Doomly" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/doom_primary</item>
-        <item name="colorPrimaryVariant">@color/doom_primary</item>
-        <item name="colorOnPrimary">@color/doom_bg</item>
-        <item name="colorSecondary">@color/doom_surface_alt</item>
-        <item name="colorOnSecondary">@color/doom_text</item>
-        <item name="android:colorBackground">@color/doom_bg</item>
-        <item name="android:windowBackground">@color/doom_bg</item>
-        <item name="android:fontFamily">sans-serif</item>
-        <item name="android:navigationBarColor">@color/doom_bg</item>
-        <item name="android:statusBarColor">@color/doom_bg</item>
-        <item name="android:windowLightStatusBar">true</item>
-    </style>
-
-    <!-- Launch window matches Compose to prevent a dark flash. -->
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launch window matches the black body to avoid a flash. -->
     <style name="Theme.Doomly.Compose" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/doom_bg</item>
         <item name="android:statusBarColor">@color/doom_bg</item>
         <item name="android:navigationBarColor">@color/doom_bg</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

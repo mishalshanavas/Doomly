@@ -25,6 +25,18 @@ if (listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPa
     throw GradleException("Release signing is only partially configured. Set all DOOMLY_UPLOAD_* values.")
 }
 
+// Local builds follow the CI scheme (1.0.<seconds since 2020-01-01 UTC>) so they
+// install over beta (+1) and stable (+2) builds of the same commit. CI always
+// supplies DOOMLY_VERSION_* explicitly, so this only affects local builds.
+val versionEpochSeconds = 1_577_836_800L
+val commitSeconds = runCatching {
+    providers.exec {
+        commandLine("git", "log", "-1", "--format=%ct")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim().toLongOrNull()
+}.getOrNull()
+val localVersionSource = (commitSeconds ?: (System.currentTimeMillis() / 1000)) - versionEpochSeconds
+
 if (googleServicesJson.exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
@@ -42,8 +54,8 @@ android {
         applicationId = "com.doomly.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = releaseSecret("DOOMLY_VERSION_CODE")?.toIntOrNull() ?: 1_000_000
-        versionName = releaseSecret("DOOMLY_VERSION_NAME") ?: "1.0.0"
+        versionCode = releaseSecret("DOOMLY_VERSION_CODE")?.toIntOrNull() ?: (localVersionSource + 3).toInt()
+        versionName = releaseSecret("DOOMLY_VERSION_NAME") ?: "1.0.$localVersionSource-dev"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

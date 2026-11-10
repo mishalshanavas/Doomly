@@ -1,32 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Board palette, shared with the Compose light theme. -->
-    <color name="doom_bg">#FFFFFFFF</color>
-    <color name="doom_surface">#FFF7F7F5</color>
-    <color name="doom_surface_alt">#FFF0F0ED</color>
-    <color name="doom_border">#FF383838</color>
-    <color name="doom_primary">#FF0ACF70</color>
-    <color name="doom_text">#FF171717</color>
-    <color name="doom_text_secondary">#FF707070</color>
-    <color name="doom_muted">#FF707070</color>
+    <!-- Launch window matches the black body; accent tints notifications. -->
+    <color name="doom_bg">#FF000000</color>
     <color name="doom_accent">#FF0ACF70</color>
-
-    <!-- Legacy aliases (keep existing code compiling) -->
-    <color name="notion_bg">@color/doom_bg</color>
-    <color name="notion_surface">@color/doom_surface</color>
-    <color name="notion_surface_alt">@color/doom_surface_alt</color>
-    <color name="notion_border">@color/doom_border</color>
-    <color name="notion_text_primary">@color/doom_text</color>
-    <color name="notion_text_secondary">@color/doom_text_secondary</color>
-    <color name="notion_text_muted">@color/doom_muted</color>
-    <color name="notion_accent">@color/doom_primary</color>
-
-    <!-- Nav bar tint -->
-    <color name="bottom_nav_item">@color/doom_muted</color>
-
-    <color name="paper">#FFFFFFFF</color>
-    <color name="ink">#FF171717</color>
-    <color name="quiet_gray">#FFF7F7F5</color>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
 </resources>

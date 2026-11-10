@@ -80,19 +80,20 @@ class ReelPillOverlay(private val context: Context, private val isReelsForegroun
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(14), dp(10), dp(14), dp(10))
             minimumHeight = dp(40)
-            background = GradientDrawable().apply { setColor(Color.rgb(23, 23, 23)); cornerRadius = dp(40).toFloat() }
+            background = GradientDrawable().apply { setColor(Color.rgb(28, 28, 30)); cornerRadius = 0f }
             alpha = 0f
         }
-        view.addView(ImageView(windowContext).apply {
-            setImageResource(R.drawable.ic_coach)
+        view.addView(View(windowContext).apply {
+            setBackgroundColor(Color.rgb(10, 207, 112))
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }, LinearLayout.LayoutParams(dp(20), dp(20)).apply { marginEnd = dp(8) })
+        }, LinearLayout.LayoutParams(dp(8), dp(8)).apply { marginEnd = dp(10) })
         val message = "$reels Reels · ${appreciation(reels)}"
         view.addView(TextView(windowContext).apply {
             text = message
             textSize = 13f
-            setTextColor(Color.rgb(245, 244, 239))
+            setTextColor(Color.rgb(244, 244, 246))
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            fontFeatureSettings = "tnum"
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
             maxWidth = (width - dp(84)).coerceAtLeast(dp(80))
