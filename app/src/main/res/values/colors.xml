@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launch window matches the black body; accent tints notifications. -->
+    <color name="doom_bg">#FF000000</color>
+    <color name="doom_accent">#FF0ACF70</color>
+</resources>

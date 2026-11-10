@@ -1,0 +1,148 @@
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.compose)
+}
+
+val googleServicesJson = file("google-services.json")
+fun releaseSecret(name: String): String? = providers.gradleProperty(name)
+    .orElse(providers.environmentVariable(name))
+    .orNull
+
+val releaseStoreFile = releaseSecret("DOOMLY_UPLOAD_STORE_FILE")
+val releaseStorePassword = releaseSecret("DOOMLY_UPLOAD_STORE_PASSWORD")
+val releaseKeyAlias = releaseSecret("DOOMLY_UPLOAD_KEY_ALIAS")
+val releaseKeyPassword = releaseSecret("DOOMLY_UPLOAD_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { !it.isNullOrBlank() }
+
+if (listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).any { !it.isNullOrBlank() } &&
+    !hasReleaseSigning
+) {
+    throw GradleException("Release signing is only partially configured. Set all DOOMLY_UPLOAD_* values.")
+}
+
+// Local builds follow the CI scheme (1.0.<seconds since 2020-01-01 UTC>) so they
+// install over beta (+1) and stable (+2) builds of the same commit. CI always
+// supplies DOOMLY_VERSION_* explicitly, so this only affects local builds.
+val versionEpochSeconds = 1_577_836_800L
+val commitSeconds = runCatching {
+    providers.exec {
+        commandLine("git", "log", "-1", "--format=%ct")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim().toLongOrNull()
+}.getOrNull()
+val localVersionSource = (commitSeconds ?: (System.currentTimeMillis() / 1000)) - versionEpochSeconds
+
+if (googleServicesJson.exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
+android {
+    namespace = "com.doomly.app"
+    flavorDimensions += "distribution"
+    compileSdk {
+        version = release(36) {
+            minorApiLevel = 1
+        }
+    }
+
+    defaultConfig {
+        applicationId = "com.doomly.app"
+        minSdk = 26
+        targetSdk = 36
+        versionCode = releaseSecret("DOOMLY_VERSION_CODE")?.toIntOrNull() ?: (localVersionSource + 3).toInt()
+        versionName = releaseSecret("DOOMLY_VERSION_NAME") ?: "1.0.$localVersionSource-dev"
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("upload") {
+                storeFile = file(requireNotNull(releaseStoreFile))
+                storePassword = requireNotNull(releaseStorePassword)
+                keyAlias = requireNotNull(releaseKeyAlias)
+                keyPassword = requireNotNull(releaseKeyPassword)
+            }
+        }
+    }
+
+    productFlavors {
+        create("github") {
+            dimension = "distribution"
+            buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "true")
+        }
+        create("play") {
+            dimension = "distribution"
+            buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("upload")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+        debug {
+            if (hasReleaseSigning) signingConfig = signingConfigs.getByName("upload")
+            isMinifyEnabled = false
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+}
+
+dependencies {
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.androidx.lifecycle.viewmodel)
+    implementation(libs.androidx.lifecycle.livedata)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.browser)
+    implementation(libs.okhttp)
+    implementation(libs.material)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.navigation.compose)
+    debugImplementation(libs.androidx.ui.tooling)
+    implementation(libs.androidx.runtime.livedata)
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+}
+
+tasks.register("extractApksForDebug") {
+    group = "build"
+    description = "Alias for extractApksForGithubDebug to resolve ambiguity"
+    dependsOn("extractApksForGithubDebug")
+}
+
+tasks.register("extractApksForRelease") {
+    group = "build"
+    description = "Alias for extractApksForGithubRelease to resolve ambiguity"
+    dependsOn("extractApksForGithubRelease")
+}

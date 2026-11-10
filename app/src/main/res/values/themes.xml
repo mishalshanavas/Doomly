@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launch window matches the black body to avoid a flash. -->
+    <style name="Theme.Doomly.Compose" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/doom_bg</item>
+        <item name="android:statusBarColor">@color/doom_bg</item>
+        <item name="android:navigationBarColor">@color/doom_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
