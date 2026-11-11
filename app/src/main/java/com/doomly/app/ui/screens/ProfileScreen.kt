@@ -109,7 +109,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
             SectionHeading("Appearance")
             GroupedSection {
                 val appearance = remember { context.getSharedPreferences("appearance", Context.MODE_PRIVATE) }
-                var dark by remember { mutableStateOf(appearance.getBoolean("dark", false)) }
+                var dark by remember { mutableStateOf(appearance.getBoolean("dark", true)) }
                 GroupedRow("Dark mode", showChevron = false, trailing = {
                     BodySwitch(dark, { dark = it; appearance.edit().putBoolean("dark", it).apply() }, "Dark mode")
                 })
@@ -149,7 +149,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
                 GroupedRow("Version", value = BuildConfig.VERSION_NAME)
                 HairlineDivider()
                 Text(
-                    "Counts Reels on-device. Signing in syncs name and totals only.",
+                    "Counts Reels on-device. Signing in syncs your display name, goal, totals, streak and up to a year of daily Reel counts. Your name and today's count appear in League. No screen text or Reel content is uploaded.",
                     style = MaterialTheme.typography.bodySmall, color = BodyMuted,
                     modifier = Modifier.padding(Spacing.lg)
                 )

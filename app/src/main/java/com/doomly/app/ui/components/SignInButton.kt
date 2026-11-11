@@ -30,6 +30,11 @@ fun SignInButton(onSuccess: () -> Unit) {
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
     Column {
+        Text(
+            "Signing in backs up your goal, totals, streak and up to a year of daily Reel counts. Your display name and today's count appear in League. Reel content and screen text are never uploaded.",
+            style = MaterialTheme.typography.bodySmall, color = BodyMuted
+        )
+        Spacer(Modifier.height(Spacing.md))
         PrimaryButton(
             text = if (busy) "Opening sign-in…" else "Sign in with Google",
             loading = busy,

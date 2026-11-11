@@ -65,7 +65,7 @@ private val DarkScheme = darkColorScheme(
 )
 
 @Composable
-fun DoomlyTheme(darkTheme: Boolean = false, content: @Composable () -> Unit) {
+fun DoomlyTheme(darkTheme: Boolean = true, content: @Composable () -> Unit) {
     val view = LocalView.current
     if (!view.isInEditMode) SideEffect {
         val window = (view.context as Activity).window

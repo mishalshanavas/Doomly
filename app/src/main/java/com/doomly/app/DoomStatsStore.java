@@ -23,7 +23,6 @@ public final class DoomStatsStore {
     private static final String KEY_DAILY_TARGET = "daily_target";
     private static final String KEY_DISPLAY_NAME = "display_name";
     private static final String KEY_DAILY_HISTORY = "daily_history";
-    private static final int MAX_HISTORY_DAYS = 30;
     private static final DateTimeFormatter DAY_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private DoomStatsStore() {
@@ -102,8 +101,13 @@ public final class DoomStatsStore {
 
     /** Get daily history: Map of "2026-06-09" → reelCount. */
     public static java.util.Map<String, Integer> dailyHistory(Context context) {
+        rollDayIfNeeded(prefs(context));
+        return readHistory(prefs(context));
+    }
+
+    private static java.util.Map<String, Integer> readHistory(SharedPreferences prefs) {
         java.util.LinkedHashMap<String, Integer> map = new java.util.LinkedHashMap<>();
-        String json = prefs(context).getString(KEY_DAILY_HISTORY, "{}");
+        String json = prefs.getString(KEY_DAILY_HISTORY, "{}");
         try {
             JSONObject obj = new JSONObject(json);
             java.util.Iterator<String> keys = obj.keys();
@@ -112,7 +116,7 @@ public final class DoomStatsStore {
                 map.put(key, obj.getInt(key));
             }
         } catch (Exception ignored) {}
-        return map;
+        return DailyHistoryPolicy.merge(map, java.util.Collections.emptyMap(), LocalDate.now());
     }
 
     /** Get reel count for a specific past date. */
@@ -139,19 +143,20 @@ public final class DoomStatsStore {
     /** Merge daily history from Supabase JSONArray into local store. */
     public static void mergeDailyHistory(Context context, org.json.JSONArray arr) {
         SharedPreferences p = prefs(context);
-        String json = p.getString(KEY_DAILY_HISTORY, "{}");
+        rollDayIfNeeded(p);
+        java.util.Map<String, Integer> incoming = new java.util.HashMap<>();
         try {
-            JSONObject obj = new JSONObject(json);
             for (int i = 0; i < arr.length(); i++) {
                 org.json.JSONObject row = arr.getJSONObject(i);
                 String date = row.optString("date", "");
                 int reels = row.optInt("reels", 0);
-                if (!date.isEmpty() && !obj.has(date)) {
-                    obj.put(date, reels);
-                }
+                incoming.merge(date, reels, Math::max);
             }
-            while (obj.length() > MAX_HISTORY_DAYS) obj.remove(obj.keys().next());
-            p.edit().putString(KEY_DAILY_HISTORY, obj.toString()).apply();
+            java.util.Map<String, Integer> merged = DailyHistoryPolicy.merge(readHistory(p), incoming, LocalDate.now());
+            Integer today = merged.remove(LocalDate.now().toString());
+            SharedPreferences.Editor editor = p.edit().putString(KEY_DAILY_HISTORY, new JSONObject(merged).toString());
+            if (today != null) editor.putInt(KEY_TODAY_REELS, Math.max(today, p.getInt(KEY_TODAY_REELS, 0)));
+            editor.apply();
         } catch (Exception ignored) {}
     }
 
@@ -179,17 +184,9 @@ public final class DoomStatsStore {
     }
 
     private static void commitToHistory(SharedPreferences prefs, String dateKey, int reels) {
-        String json = prefs.getString(KEY_DAILY_HISTORY, "{}");
-        try {
-            JSONObject obj = new JSONObject(json);
-            if (!obj.has(dateKey)) {
-                obj.put(dateKey, reels);
-                while (obj.length() > MAX_HISTORY_DAYS) {
-                    obj.remove(obj.keys().next());
-                }
-                prefs.edit().putString(KEY_DAILY_HISTORY, obj.toString()).apply();
-            }
-        } catch (Exception ignored) {}
+        java.util.Map<String, Integer> merged = DailyHistoryPolicy.merge(
+                readHistory(prefs), java.util.Collections.singletonMap(dateKey, reels), LocalDate.now());
+        prefs.edit().putString(KEY_DAILY_HISTORY, new JSONObject(merged).toString()).apply();
     }
 
     public static final class Snapshot {

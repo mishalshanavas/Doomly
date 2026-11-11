@@ -8,7 +8,7 @@ import android.util.Log;
 import com.doomly.app.data.AuthRepository;
 import com.doomly.app.data.StatsRepository;
 
-/** Debounces and coordinates local-stat synchronization with Supabase. */
+/** Coalesces local changes without postponing synchronization during continuous scrolling. */
 public final class CloudSyncScheduler {
     private static final String TAG = "DoomlyCloudSync";
     private static final long SYNC_DEBOUNCE_MS = 30_000L;
@@ -19,8 +19,13 @@ public final class CloudSyncScheduler {
 
     public static synchronized void scheduleSync(Context context) {
         Context appContext = context.getApplicationContext();
-        if (pendingSync != null) MAIN.removeCallbacks(pendingSync);
-        pendingSync = () -> syncNow(appContext, silentCallback());
+        if (pendingSync != null) return;
+        pendingSync = () -> {
+            synchronized (CloudSyncScheduler.class) {
+                pendingSync = null;
+            }
+            syncNow(appContext, silentCallback());
+        };
         MAIN.postDelayed(pendingSync, SYNC_DEBOUNCE_MS);
     }
 

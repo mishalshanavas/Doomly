@@ -188,13 +188,17 @@ public final class AuthRepository {
                     if (!name.isEmpty()) DoomStatsStore.setDisplayName(activity, name);
                     Log.d(TAG, "Google sign-in success");
 
-                    // Pull existing cloud data to restore user's stats
+                    // Restore before sign-in observers refresh League and upload local counts.
                     StatsRepository.getInstance().pullFromCloud(activity, uid, new ResultCallback<Void>() {
-                        @Override public void onSuccess(Void v) { Log.d(TAG, "Cloud pull complete"); }
-                        @Override public void onError(String m) { Log.w(TAG, "Cloud pull failed: " + m); }
+                        @Override public void onSuccess(Void v) {
+                            Log.d(TAG, "Cloud pull complete");
+                            activity.runOnUiThread(() -> fireError(null));
+                        }
+                        @Override public void onError(String m) {
+                            Log.w(TAG, "Cloud pull failed: " + m);
+                            activity.runOnUiThread(() -> fireError(null));
+                        }
                     });
-
-                    activity.runOnUiThread(() -> fireError(null)); // null = success
                 } catch (Exception e) {
                     Log.e(TAG, "Parse", e);
                     activity.runOnUiThread(() -> fireError(e.getMessage()));

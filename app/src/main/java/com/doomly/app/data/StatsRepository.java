@@ -40,13 +40,15 @@ public final class StatsRepository {
     public void syncToCloud(Context context, String uid, String displayName,
                             String photoUrl, ResultCallback<Void> callback) {
         DoomStatsStore.Snapshot snap = DoomStatsStore.snapshot(context);
+        java.util.Map<String, Integer> history = DoomStatsStore.dailyHistory(context);
+        history.put(java.time.LocalDate.now().toString(), snap.todayReels);
         SupabaseClient client = SupabaseClient.getInstance();
         if (client == null || !client.getConfig().isConfigured()) { callback.onError("Sync is unavailable."); return; }
 
         client.upsertUser(uid, displayName, snap.dailyTarget, snap.totalReels, snap.streak, snap.streak,
             new ResultCallback<Void>() {
                 @Override public void onSuccess(Void v) {
-                    client.upsertDaily(uid, displayName, snap.todayReels, callback);
+                    client.upsertDailyHistory(uid, displayName, history, callback);
                 }
                 @Override public void onError(String m) { callback.onError(m); }
             });

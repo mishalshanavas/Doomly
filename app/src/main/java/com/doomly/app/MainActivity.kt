@@ -33,10 +33,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val appearance = androidx.compose.runtime.remember { getSharedPreferences("appearance", MODE_PRIVATE) }
-            var dark by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(appearance.getBoolean("dark", false)) }
+            var dark by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(appearance.getBoolean("dark", true)) }
             androidx.compose.runtime.DisposableEffect(Unit) {
                 val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
-                    if (key == "dark") dark = prefs.getBoolean("dark", false)
+                    if (key == "dark") dark = prefs.getBoolean("dark", true)
                 }
                 appearance.registerOnSharedPreferenceChangeListener(listener)
                 onDispose { appearance.unregisterOnSharedPreferenceChangeListener(listener) }

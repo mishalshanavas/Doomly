@@ -46,31 +46,52 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
         "Optional. Milestones, reminders and updates."
     )
     val goalValid = goal.toIntOrNull() in 1..20_000
+    val enterDuration = motionDuration(200)
+    val exitDuration = motionDuration(120)
 
-    Column(Modifier.fillMaxSize().background(BodyBg).verticalScroll(rememberScrollState())) {
-        TopSheet {
-            SheetContent {
-                AnimatedContent(step, transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(120)) }, label = "step") { s ->
-                    LabelStack(label = "Step ${s + 1} of 3", title = titles[s], meta = captions[s])
+    Column(Modifier.fillMaxSize().background(BodyBg).safeDrawingPadding().imePadding()) {
+        Column(
+            Modifier.weight(1f).verticalScroll(rememberScrollState())
+                .padding(horizontal = Spacing.screen, vertical = Spacing.xxl),
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("YOUR DOOMLY", style = MaterialTheme.typography.labelLarge, color = BodyMuted)
+            Spacer(Modifier.height(Spacing.xxl))
+            Column(
+                Modifier.fillMaxWidth().background(Sheet, DoomlyShapes.extraLarge)
+                    .padding(Spacing.xxl)
+            ) {
+                SheetContent {
+                    AnimatedContent(step, transitionSpec = { fadeIn(tween(enterDuration)) togetherWith fadeOut(tween(exitDuration)) }, label = "step") { s ->
+                        LabelStack(label = "Step ${s + 1} of 3", title = titles[s], meta = captions[s])
+                    }
+                    Spacer(Modifier.height(Spacing.xl))
+                    DottedProgress((step + 1) / 3f, description = "Step ${step + 1} of 3")
                 }
-                Spacer(Modifier.height(Spacing.xl))
-                DottedProgress((step + 1) / 3f, description = "Step ${step + 1} of 3")
-            }
-            Spacer(Modifier.height(Spacing.lg))
-            if (step == 0) {
-                InsetCard {
-                    OutlinedTextField(
-                        goal, { goal = it.filter(Char::isDigit).take(5) }, label = { Text("Reels per day") },
-                        singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        isError = goal.isNotEmpty() && !goalValid,
-                        supportingText = { if (goal.isNotEmpty() && !goalValid) Text("1–20,000") },
-                        modifier = Modifier.fillMaxWidth(), shape = DoomlyShapes.medium, colors = sheetFieldColors()
-                    )
+                Spacer(Modifier.height(Spacing.lg))
+                if (step == 0) {
+                    InsetCard {
+                        OutlinedTextField(
+                            goal, { goal = it.filter(Char::isDigit).take(5) }, label = { Text("Reels per day") },
+                            singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            isError = goal.isNotEmpty() && !goalValid,
+                            supportingText = { if (goal.isNotEmpty() && !goalValid) Text("1–20,000") },
+                            modifier = Modifier.fillMaxWidth(), shape = DoomlyShapes.medium, colors = sheetFieldColors()
+                        )
+                    }
+                } else {
+                    SheetContent {
+                        Text(
+                            if (step == 1) "You stay in control. Enable tracking to count Reels automatically, or skip and set it up later in Profile."
+                            else "Choose whether Doomly can send reminders. You can change this anytime in Android Settings.",
+                            style = MaterialTheme.typography.bodyLarge, color = Smoke
+                        )
+                    }
                 }
             }
         }
         Column(Modifier.padding(horizontal = Spacing.screen)) {
-            Spacer(Modifier.height(Spacing.xxl))
+            Spacer(Modifier.height(Spacing.lg))
             PrimaryButton(
                 text = when (step) { 0 -> "Continue"; 1 -> "Turn on tracking"; else -> if (denied) "Open Settings" else "Allow notifications" },
                 enabled = step != 0 || goalValid,
@@ -86,7 +107,6 @@ fun PermissionsScreen(resumeCount: Int = 0, onDone: () -> Unit = {}) {
             if (step > 0) QuietButton("Not now", onClick = { if (step == 1) step = 2 else finish() })
             if (denied && step == 2) Text("Doomly works without notifications.", color = BodyMuted, style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(Spacing.xxl))
-            Spacer(Modifier.navigationBarsPadding())
         }
     }
     if (disclosure) TrackingDisclosure(onDismiss = { disclosure = false })

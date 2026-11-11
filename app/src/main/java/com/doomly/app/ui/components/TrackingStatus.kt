@@ -67,7 +67,7 @@ fun TrackingDisclosure(onDismiss: () -> Unit) {
         text = {
             Text(
                 if (settingsError) "Couldn't open Settings. Open Android Settings → Accessibility → Doomly to turn on tracking, or choose Not now."
-                else "Doomly uses Accessibility to recognise Reels in Instagram. Screen text is not stored or uploaded; only totals sync if you sign in.",
+                else "Doomly uses Accessibility to recognise Reels in Instagram. Screen text and Reel content are not stored or uploaded. Signing in syncs your display name, goal, totals, streak and up to a year of daily counts; your name and today's count appear in League. Without signing in, counts stay on this device.",
                 style = MaterialTheme.typography.bodyMedium, color = Smoke
             )
         },

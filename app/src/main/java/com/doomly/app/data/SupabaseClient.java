@@ -2,6 +2,7 @@ package com.doomly.app.data;
 
 import android.util.Log;
 import com.doomly.app.ResultCallback;
+import com.doomly.app.DailyHistoryPolicy;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.IOException;
@@ -64,10 +65,23 @@ public final class SupabaseClient {
 
     // ── DB: Daily History ──────────────────────────────────────────
 
-    public void upsertDaily(String uid, String displayName, int reels, ResultCallback<Void> cb) {
-        JSONObject b = new JSONObject();
-        try { b.put("uid", uid); b.put("display_name", displayName); b.put("date", java.time.LocalDate.now().toString()); b.put("reels", reels); } catch (Exception e) { cb.onError("build"); return; }
-        post("/daily_history", b, new JC() { public void onJson(JSONObject j) { cb.onSuccess(null); } public void onError(String m) { cb.onError(m); } });
+    public void upsertDailyHistory(String uid, String displayName, java.util.Map<String, Integer> history,
+                                   ResultCallback<Void> cb) {
+        JSONArray rows = new JSONArray();
+        try {
+            for (java.util.Map.Entry<String, Integer> day : history.entrySet()) {
+                JSONObject row = new JSONObject();
+                row.put("uid", uid);
+                row.put("display_name", displayName);
+                row.put("date", day.getKey());
+                row.put("reels", day.getValue());
+                rows.put(row);
+            }
+        } catch (Exception e) { cb.onError("Could not build history backup."); return; }
+        postJson("/daily_history?on_conflict=uid,date", rows.toString(), new JC() {
+            public void onJson(JSONObject ignored) { cb.onSuccess(null); }
+            public void onError(String message) { cb.onError(message); }
+        });
     }
 
     public void fetchLeaderboard(ResultCallback<JSONArray> cb) {
@@ -76,7 +90,7 @@ public final class SupabaseClient {
     }
 
     public void fetchHistory(String uid, ResultCallback<JSONArray> cb) {
-        get("/daily_history?uid=eq." + uid + "&order=date.desc&limit=30", new JAC() { public void onJson(JSONArray a) { cb.onSuccess(a); } public void onError(String m) { cb.onError(m); } });
+        get("/daily_history?uid=eq." + uid + "&order=date.desc&limit=" + DailyHistoryPolicy.RETENTION_DAYS, new JAC() { public void onJson(JSONArray a) { cb.onSuccess(a); } public void onError(String m) { cb.onError(m); } });
     }
 
     /** Register one FCM token for the signed-in Supabase user. */
@@ -98,9 +112,13 @@ public final class SupabaseClient {
     private String authHdr() { return "Bearer " + (accessToken != null ? accessToken : config.anonKey); }
 
     private void post(String path, JSONObject body, JC cb) {
+        postJson(path, body.toString(), cb);
+    }
+
+    private void postJson(String path, String body, JC cb) {
         Request r = new Request.Builder().url(config.restBaseUrl() + path)
                 .header("apikey", config.anonKey).header("Authorization", authHdr()).header("Prefer", "resolution=merge-duplicates")
-                .post(RequestBody.create(body.toString(), JSON)).build();
+                .post(RequestBody.create(body, JSON)).build();
         http.newCall(r).enqueue(new Callback() {
             public void onFailure(Call c, IOException e) { cb.onError(safeMessage(e)); }
             public void onResponse(Call c, Response res) throws IOException {
