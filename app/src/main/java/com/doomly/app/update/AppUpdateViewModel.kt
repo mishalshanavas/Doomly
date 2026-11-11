@@ -78,9 +78,9 @@ class AppUpdateViewModel(application: Application) : AndroidViewModel(applicatio
         val ready = state as? UpdateState.ReadyToInstall ?: return
         autoAttemptedTag = ready.release.tagName
         val needsPermission = !activity.packageManager.canRequestPackageInstalls()
-        val started = manager.install(activity, ready)
-        awaitingInstallPermission = started && needsPermission
-        if (!started) state = UpdateState.Failed("Android couldn't open the installer. Check again to retry.")
+        val failure = manager.install(activity, ready)
+        awaitingInstallPermission = failure == null && needsPermission
+        if (failure != null) state = failure
     }
 
     override fun onCleared() { manager.cancel() }

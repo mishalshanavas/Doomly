@@ -170,9 +170,15 @@ class GitHubUpdateManager(context: Context) {
                                 partial.delete()
                                 return
                             }
-                            if (!verifyDownloadedApk(partial, release) || !partial.renameTo(apk)) {
+                            val failure = verificationFailure(partial, release)
+                            if (failure != null) {
                                 partial.delete()
-                                post(call, onState, UpdateState.Failed("Update verification failed. Nothing was installed."))
+                                post(call, onState, UpdateState.Failed(failure.message))
+                                return
+                            }
+                            if (!partial.renameTo(apk)) {
+                                partial.delete()
+                                post(call, onState, UpdateState.Failed("The verified APK couldn't be saved. Retry the download."))
                                 return
                             }
                             post(call, onState, UpdateState.ReadyToInstall(release, apk))
@@ -188,17 +194,18 @@ class GitHubUpdateManager(context: Context) {
 
     private fun matchingCachedApk(release: GitHubRelease): File? {
         val apk = File(appContext.cacheDir, "updates/doomly-update.apk")
-        return apk.takeIf { verifyDownloadedApk(it, release) }
+        return apk.takeIf { verificationFailure(it, release) == null }
     }
 
-    fun install(activity: Activity, ready: UpdateState.ReadyToInstall): Boolean {
-        if (!BuildConfig.ENABLE_GITHUB_UPDATES || !verifyDownloadedApk(ready.apk, ready.release)) return false
+    fun install(activity: Activity, ready: UpdateState.ReadyToInstall): UpdateState.Failed? {
+        if (!BuildConfig.ENABLE_GITHUB_UPDATES) return UpdateState.Failed("In-app APK updates aren't available in this build.")
         return try {
+            val failure = verificationFailure(ready.apk, ready.release)
+            if (failure != null) return UpdateState.Failed(failure.message)
             if (!activity.packageManager.canRequestPackageInstalls()) {
                 activity.startActivity(
                     Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${activity.packageName}"))
                 )
-                true
             } else {
                 val uri = FileProvider.getUriForFile(
                     activity,
@@ -208,14 +215,14 @@ class GitHubUpdateManager(context: Context) {
                 val install = Intent(Intent.ACTION_VIEW)
                     .setDataAndType(uri, APK_MIME_TYPE)
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                if (install.resolveActivity(activity.packageManager) == null) false
-                else {
-                    activity.startActivity(install)
-                    true
+                if (install.resolveActivity(activity.packageManager) == null) {
+                    return UpdateState.Failed("No Android APK installer is available on this device.")
                 }
+                activity.startActivity(install)
             }
+            null
         } catch (_: Exception) {
-            false
+            UpdateState.Failed("Android couldn't open the installer. Check again to retry.")
         }
     }
 
@@ -247,23 +254,23 @@ class GitHubUpdateManager(context: Context) {
     }
 
     @Suppress("DEPRECATION")
-    private fun verifyDownloadedApk(apk: File, release: GitHubRelease): Boolean {
-        if (!apk.isFile || apk.length() !in 1..MAX_APK_BYTES) return false
-        if (apk.length() != release.apkSize) return false
+    private fun verificationFailure(apk: File, release: GitHubRelease): ApkVerificationPolicy.Failure? {
+        if (!apk.isFile) return ApkVerificationPolicy.Failure.FILE_MISSING
+        if (apk.length() !in 1..MAX_APK_BYTES || apk.length() != release.apkSize) {
+            return ApkVerificationPolicy.Failure.SIZE_MISMATCH
+        }
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             PackageManager.GET_SIGNING_CERTIFICATES
         } else {
             PackageManager.GET_SIGNATURES
         }
-        val archive = appContext.packageManager.getPackageArchiveInfo(apk.absolutePath, flags) ?: return false
-        if (archive.packageName != appContext.packageName) return false
-        if (archive.versionName != release.versionName) return false
-        val expectedCode = UpdateCandidatePolicy.buildCode(release.notes)
-        if (expectedCode > 0 && archive.longVersionCodeCompat() != expectedCode) return false
+        val archive = appContext.packageManager.getPackageArchiveInfo(apk.absolutePath, flags)
+            ?: return ApkVerificationPolicy.Failure.UNREADABLE_ARCHIVE
         val installed = appContext.packageManager.getPackageInfo(appContext.packageName, flags)
-        if (archive.longVersionCodeCompat() <= installed.longVersionCodeCompat()) return false
-        val installedSigners = certificateDigests(installed)
-        return installedSigners.isNotEmpty() && certificateDigests(archive) == installedSigners
+        fun identity(info: android.content.pm.PackageInfo) = ApkVerificationPolicy.Identity(
+            info.packageName, info.versionName, info.longVersionCodeCompat(), certificateDigests(info))
+        return ApkVerificationPolicy.verify(identity(archive), identity(installed),
+            release.versionName, UpdateCandidatePolicy.buildCode(release.notes))
     }
 
     @Suppress("DEPRECATION")
