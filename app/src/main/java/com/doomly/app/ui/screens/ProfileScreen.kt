@@ -8,6 +8,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -35,6 +36,9 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
     val total by viewModel.getTotalReels().observeAsState("0")
     val signedIn by viewModel.getSignedIn().observeAsState(false)
     var confirmSignOut by remember { mutableStateOf(false) }
+    var editGoal by rememberSaveable { mutableStateOf(false) }
+    var goalText by rememberSaveable { mutableStateOf("") }
+    var goalFeedback by remember { mutableStateOf<String?>(null) }
     val updateState = updates?.state ?: UpdateState.UpToDate
     StatsRefreshEffect { viewModel.refresh() }
     val todayReels = DoomStatsStore.snapshot(context).todayReels
@@ -43,6 +47,19 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
     val usageHistory = history + (java.time.LocalDate.now().toString() to todayReels)
     val totalNumber = total.toIntOrNull()
 
+    if (editGoal) GoalDialog(goalText, { goalText = it }, {
+        goalFeedback = "Goal updated"
+        com.doomly.app.CloudSyncScheduler.updateDailyTarget(context, goalText.toIntOrNull() ?: target, object : com.doomly.app.ResultCallback<Void> {
+            override fun onSuccess(value: Void?) = Unit
+            override fun onError(message: String) {
+                goalFeedback = "Saved on device"
+                com.doomly.app.CloudSyncScheduler.scheduleSync(context)
+            }
+        })
+        viewModel.refresh()
+        editGoal = false
+    }, { editGoal = false })
+
     if (confirmSignOut) AlertDialog(onDismissRequest = { confirmSignOut = false }, shape = DoomlyShapes.extraLarge, containerColor = Sheet,
         title = { Text("Sign out?", style = MaterialTheme.typography.headlineSmall, color = Ink) },
         text = { Text("Counts stay on this device.", style = MaterialTheme.typography.bodyMedium, color = Smoke) },
@@ -50,6 +67,7 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
         dismissButton = { TextButton(onClick = { confirmSignOut = false }) { Text("Cancel", color = Smoke) } })
 
     Column(Modifier.fillMaxSize().background(BodyBg).verticalScroll(rememberScrollState())) {
+        TrackingStatus(resumeCount, Modifier.statusBarsPadding().padding(start = Spacing.screen, end = Spacing.screen, top = Spacing.lg))
         TopSheet {
             SheetContent {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -73,14 +91,15 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
             SectionHeading("Today")
             GroupedSection {
                 GroupedRow("Reels", value = todayReels.grouped()); HairlineDivider()
-                GroupedRow("Daily goal", value = target.grouped()); HairlineDivider()
+                GroupedRow("Daily goal", value = target.grouped(), subtitle = "Tap to edit your daily goal", onClick = {
+                    goalText = target.toString(); editGoal = true
+                }); HairlineDivider()
                 GroupedRow("Level", value = ScrollLevel.forCount(todayReels).title)
             }
+            goalFeedback?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = BodyMuted) }
             Spacer(Modifier.height(Spacing.xxl))
             SectionHeading("Last 30 days")
             GroupedSection { DotMatrix(usageHistory) }
-            Spacer(Modifier.height(Spacing.xxl))
-            TrackingStatus(resumeCount)
             if (!signedIn) {
                 Spacer(Modifier.height(Spacing.xxl))
                 SectionHeading("Join the league")
@@ -93,6 +112,13 @@ fun ProfileScreen(viewModel: ProfileViewModel = viewModel(), onSignOut: () -> Un
                 var dark by remember { mutableStateOf(appearance.getBoolean("dark", false)) }
                 GroupedRow("Dark mode", showChevron = false, trailing = {
                     BodySwitch(dark, { dark = it; appearance.edit().putBoolean("dark", it).apply() }, "Dark mode")
+                })
+                HairlineDivider()
+                val reduced = LocalReduceMotion.current
+                GroupedRow("Reduce motion", subtitle = "Still counters, charts, transitions and celebrations", showChevron = false, trailing = {
+                    BodySwitch(reduced, {
+                        com.doomly.app.overlay.ReelPillOverlay.preferences(context).edit().putBoolean("reduce_motion", it).apply()
+                    }, "Reduce motion")
                 })
             }
             Spacer(Modifier.height(Spacing.xxl))

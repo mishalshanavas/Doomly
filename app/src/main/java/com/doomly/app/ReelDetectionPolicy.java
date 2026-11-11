@@ -4,6 +4,10 @@ package com.doomly.app;
 final class ReelDetectionPolicy {
     private ReelDetectionPolicy() {}
 
+    static boolean shouldRetryCount(boolean pending, boolean alreadyCounted, String fingerprint) {
+        return !pending && !alreadyCounted && !fingerprint.isEmpty();
+    }
+
     static boolean looksLikeReels(
             boolean viewerPager,
             boolean mediaComponent,

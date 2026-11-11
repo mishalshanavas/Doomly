@@ -40,7 +40,6 @@ fun ReelPillSettings(refreshKey: Int = 0) {
     }
     var camera by remember { mutableStateOf(prefs.getBoolean("camera_aligned", true)) }
     var haptics by remember { mutableStateOf(prefs.getBoolean("haptics", false)) }
-    var reduced by remember { mutableStateOf(prefs.getBoolean("reduce_motion", false)) }
     var offset by remember { mutableFloatStateOf(prefs.getInt("offset", 0).toFloat()) }
 
     SectionHeading("Celebrations")
@@ -81,10 +80,6 @@ fun ReelPillSettings(refreshKey: Int = 0) {
             HairlineDivider()
             GroupedRow("Haptics", showChevron = false, trailing = {
                 BodySwitch(haptics, { haptics = it; prefs.edit().putBoolean("haptics", it).apply() }, "Haptics")
-            })
-            HairlineDivider()
-            GroupedRow("Reduce motion", showChevron = false, trailing = {
-                BodySwitch(reduced, { reduced = it; prefs.edit().putBoolean("reduce_motion", it).apply() }, "Reduce motion")
             })
             HairlineDivider()
             GroupedRow("Preview", onClick = { preview.preview() })

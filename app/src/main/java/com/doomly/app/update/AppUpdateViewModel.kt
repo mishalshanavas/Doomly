@@ -2,6 +2,7 @@ package com.doomly.app.update
 
 import android.app.Activity
 import android.app.Application
+import android.os.SystemClock
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -17,14 +18,17 @@ class AppUpdateViewModel(application: Application) : AndroidViewModel(applicatio
     private var busy = false
     private var autoAttemptedTag: String? = null
     private var awaitingInstallPermission = false
+    private var lastCheckAt = -1L
 
     fun onAppOpen() {
         if (!BuildConfig.ENABLE_GITHUB_UPDATES || busy || state is UpdateState.ReadyToInstall) return
+        if (!UpdateCheckPolicy.shouldCheck(SystemClock.elapsedRealtime(), lastCheckAt)) return
         checkNow()
     }
 
     fun checkNow() {
         if (!BuildConfig.ENABLE_GITHUB_UPDATES || busy) return
+        lastCheckAt = SystemClock.elapsedRealtime()
         busy = true
         val request = generation
         manager.check { if (request == generation) receive(it) }
@@ -51,6 +55,7 @@ class AppUpdateViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun download(release: GitHubRelease) {
+        if (!BuildConfig.ENABLE_GITHUB_UPDATES || state is UpdateState.Downloading) return
         busy = true
         val request = generation
         manager.download(release) { if (request == generation) receive(it) }

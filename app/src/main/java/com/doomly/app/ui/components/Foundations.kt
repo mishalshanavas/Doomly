@@ -99,8 +99,8 @@ fun LabelStack(label: String, title: String, modifier: Modifier = Modifier, meta
 @Composable
 fun DottedProgress(progress: Float, modifier: Modifier = Modifier, complete: Boolean = false, description: String = "") {
     val target = progress.coerceIn(0f, 1f)
-    val animated by animateFloatAsState(target, tween(500, easing = FastOutSlowInEasing), label = "progress")
-    val fill by animateColorAsState(if (complete) Accent else Ink, tween(300), label = "progress-fill")
+    val animated by animateFloatAsState(target, tween(motionDuration(500), easing = FastOutSlowInEasing), label = "progress")
+    val fill by animateColorAsState(if (complete) Accent else Ink, tween(motionDuration(300)), label = "progress-fill")
     val track = Field
     val dot = Hairline
     Canvas(
@@ -149,8 +149,8 @@ fun TabLabel(
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyLarge
 ) {
-    val color by animateColorAsState(if (selected) BodyInk else BodyMuted, tween(200), label = "tab")
-    val line by animateColorAsState(if (selected) BodyInk else Color.Transparent, tween(200), label = "tab-line")
+    val color by animateColorAsState(if (selected) BodyInk else BodyMuted, tween(motionDuration(200)), label = "tab")
+    val line by animateColorAsState(if (selected) BodyInk else Color.Transparent, tween(motionDuration(200)), label = "tab-line")
     Box(
         modifier.heightIn(min = 44.dp).selectable(selected = selected, role = Role.Tab, onClick = onClick),
         contentAlignment = Alignment.Center
@@ -254,7 +254,7 @@ fun PrimaryButton(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.97f else 1f, tween(120), label = "press")
+    val scale by animateFloatAsState(if (pressed && !LocalReduceMotion.current) 0.97f else 1f, tween(motionDuration(120)), label = "press")
     Button(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().heightIn(min = 54.dp).graphicsLayer { scaleX = scale; scaleY = scale },
@@ -309,7 +309,7 @@ fun WeekChart(history: Map<String, Int>, todayCount: Int, modifier: Modifier = M
         Row(Modifier.fillMaxWidth().height(96.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Bottom) {
             days.forEachIndexed { index, date ->
                 val count = counts[index]
-                val fraction by animateFloatAsState(if (count <= 0) 0.05f else 0.1f + 0.9f * count / peak, tween(400), label = "bar")
+                val fraction by animateFloatAsState(if (count <= 0) 0.05f else 0.1f + 0.9f * count / peak, tween(motionDuration(400)), label = "bar")
                 Box(
                     Modifier.width(24.dp).fillMaxHeight(fraction)
                         .clip(RoundedCornerShape(8.dp))
@@ -374,6 +374,10 @@ fun DotAvatar(seed: String, modifier: Modifier = Modifier, onBody: Boolean = fal
 /** Pulsing placeholder for the hero number while the first snapshot loads. */
 @Composable
 fun CounterSkeleton(modifier: Modifier = Modifier) {
+    if (LocalReduceMotion.current) {
+        Box(modifier.padding(vertical = Spacing.sm).width(160.dp).height(76.dp).clip(DoomlyShapes.medium).background(Field))
+        return
+    }
     val transition = rememberInfiniteTransition(label = "skeleton")
     val alpha by transition.animateFloat(
         initialValue = 1f, targetValue = 0.4f,

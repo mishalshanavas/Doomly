@@ -10,7 +10,7 @@ import java.time.format.DateTimeFormatter;
 
 public final class DoomStatsStore {
     public static final String ACTION_STATS_CHANGED = "com.doomly.app.STATS_CHANGED";
-    public static final int DEFAULT_DAILY_TARGET = 2000;
+    public static final int DEFAULT_DAILY_TARGET = 200;
 
     private static final String PREFS = "doomly_stats";
     private static final String KEY_TODAY = "today";

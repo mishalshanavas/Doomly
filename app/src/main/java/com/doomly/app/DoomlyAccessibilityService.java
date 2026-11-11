@@ -149,6 +149,12 @@ public class DoomlyAccessibilityService extends AccessibilityService {
                 fileLog("reel scroll from=" + event.getFromIndex() + " to=" + event.getToIndex());
                 scheduleSettledCount(SWIPE_SETTLE_MS, "swipe");
             }
+
+            if (ReelDetectionPolicy.shouldRetryCount(pendingCount != null,
+                    recentlyCounted.contains(info.contentFingerprint, System.currentTimeMillis()),
+                    info.contentFingerprint)) {
+                scheduleSettledCount(SWIPE_SETTLE_MS, "retry");
+            }
         } catch (RuntimeException error) {
             Log.e(TAG, "Reel detector event failed", error);
             fileLog("event error " + error.getClass().getSimpleName());
@@ -252,6 +258,7 @@ public class DoomlyAccessibilityService extends AccessibilityService {
         AccessibilityNodeInfo root = getRootInActiveWindow();
         if (root == null) return;
         try {
+            if (!INSTAGRAM_PKG.contentEquals(root.getPackageName())) return;
             ScreenInfo info = ScreenInfo.from(root);
             long now = SystemClock.elapsedRealtime();
             if (!info.looksLikeReels() || info.isOverlayOpen || info.isAd) return;

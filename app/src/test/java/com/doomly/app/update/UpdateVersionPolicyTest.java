@@ -23,4 +23,20 @@ public class UpdateVersionPolicyTest {
         assertFalse(UpdateVersionPolicy.isNewer("0.9.9", "1.0.0"));
         assertFalse(UpdateVersionPolicy.isNewer("broken", "1.0.0"));
     }
+
+    @Test public void stableReplacesSameVersionBeta() {
+        assertTrue(UpdateVersionPolicy.isNewer("1.0.0", "1.0.0-beta"));
+        assertFalse(UpdateVersionPolicy.isNewer("1.0.0-beta", "1.0.0"));
+        assertTrue(UpdateVersionPolicy.isNewer("1.0.0-beta.10", "1.0.0-beta.2"));
+        assertTrue(UpdateVersionPolicy.isNewer("1.0.0-rc.1", "1.0.0-beta.10"));
+        assertFalse(UpdateVersionPolicy.isNewer("1.0.0+build.2", "1.0.0+build.1"));
+    }
+
+    @Test public void rejectsMalformedSemanticVersions() {
+        assertFalse(UpdateVersionPolicy.isValid("1.0.0-"));
+        assertFalse(UpdateVersionPolicy.isValid("1.0.0-beta!"));
+        assertFalse(UpdateVersionPolicy.isValid("1.0.0-beta..1"));
+        assertFalse(UpdateVersionPolicy.isValid("01.0.0"));
+        assertFalse(UpdateVersionPolicy.isValid("1.0.0-01"));
+    }
 }

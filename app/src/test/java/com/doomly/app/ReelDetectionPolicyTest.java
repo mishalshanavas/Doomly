@@ -6,6 +6,22 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class ReelDetectionPolicyTest {
+    @Test public void interruptedCountRetriesWhenSameReelBecomesEligible() {
+        assertTrue(ReelDetectionPolicy.shouldRetryCount(false, false, "same-reel"));
+    }
+
+    @Test public void pendingCountIsNotPostponedByContentEvents() {
+        assertFalse(ReelDetectionPolicy.shouldRetryCount(true, false, "same-reel"));
+    }
+
+    @Test public void countedReelDoesNotScheduleAnotherRetry() {
+        assertFalse(ReelDetectionPolicy.shouldRetryCount(false, true, "same-reel"));
+    }
+
+    @Test public void retryWaitsForContentIdentity() {
+        assertFalse(ReelDetectionPolicy.shouldRetryCount(false, false, ""));
+    }
+
     @Test public void fullViewerIsRecognized() {
         assertTrue(ReelDetectionPolicy.looksLikeReels(true, true, true, false, 3, true));
     }

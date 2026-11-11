@@ -1,6 +1,11 @@
 package com.doomly.app.ui.navigation
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.*
@@ -17,12 +22,13 @@ import com.doomly.app.ui.theme.*
 
 private object Route {
     const val HOME = "home"; const val BOARD = "board"
-    const val PERMISSIONS = "permissions"; const val PROFILE = "profile"; const val RESEARCH = "research"
+    const val PERMISSIONS = "permissions"; const val PROFILE = "profile"
 }
 
 @Composable
 fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onNotificationHandled: () -> Unit = {}, updates: AppUpdateViewModel? = null, onInstallUpdate: () -> Unit = {}) {
     val context = LocalContext.current
+    val reducedMotion = LocalReduceMotion.current
     val nav = rememberNavController()
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
@@ -34,13 +40,13 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
             onNotificationHandled()
         }
     }
-    val tabs = listOf(Route.HOME to "Today", Route.BOARD to "League", Route.RESEARCH to "Read", Route.PROFILE to "Profile")
+    val tabs = listOf(Route.HOME to "Today", Route.BOARD to "League", Route.PROFILE to "Profile")
     Scaffold(
         containerColor = BodyBg,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        topBar = { if (updates != null && route != Route.RESEARCH) UpdateBanner(updates.state, onInstallUpdate) },
+        topBar = { if (updates != null) UpdateBanner(updates.state, onInstallUpdate) },
         bottomBar = {
-            if (ready && route != Route.PERMISSIONS && route != Route.RESEARCH) {
+            if (ready && route != Route.PERMISSIONS) {
                 Column(Modifier.fillMaxWidth().background(BodyBg)) {
                     HorizontalDivider(thickness = 0.5.dp, color = BodySeparator)
                     Row(
@@ -62,8 +68,10 @@ fun DoomlyNav(resumeCount: Int = 0, notificationDestination: String? = null, onN
         }
     ) { padding ->
         Box(Modifier.fillMaxSize().background(BodyBg).padding(padding).consumeWindowInsets(padding)) {
-            NavHost(nav, start, Modifier.fillMaxSize()) {
-                composable(Route.RESEARCH) { ResearchScreen(onClose = { nav.popBackStack() }) }
+            NavHost(nav, start, Modifier.fillMaxSize(),
+                enterTransition = { if (reducedMotion) EnterTransition.None else fadeIn(tween(250)) },
+                exitTransition = { if (reducedMotion) ExitTransition.None else fadeOut(tween(250)) }
+            ) {
                 composable(Route.HOME) { HomeScreen(resumeCount = resumeCount) }
                 composable(Route.BOARD) { LeaderboardScreen(resumeCount = resumeCount) }
                 composable(Route.PERMISSIONS) {

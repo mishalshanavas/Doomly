@@ -3,6 +3,7 @@ package com.doomly.app.ui.components
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
@@ -11,30 +12,44 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.doomly.app.DeviceReadiness
 import com.doomly.app.ui.theme.*
 
-/** One quiet status line when tracking is on; a single actionable row when paused. */
+/**
+ * Silent while tracking is on — no label, no dot. When tracking is off, one
+ * warning row (a "!" badge) goes at the top of the screen instead.
+ */
 @Composable
-fun TrackingStatus(refreshKey: Int = 0) {
+fun TrackingStatus(refreshKey: Int = 0, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     var disclosure by remember { mutableStateOf(false) }
     val tracking = remember(refreshKey) { DeviceReadiness.accessibilityEnabled(context) }
-    if (tracking) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(BodyAccent))
-            Spacer(Modifier.width(Spacing.sm))
-            Text("Tracking on", style = MaterialTheme.typography.bodyMedium, color = BodyMuted)
-        }
-    } else {
-        GroupedSection {
-            GroupedRow(
-                "Tracking paused",
-                subtitle = "Counts are saved on this device.",
-                onClick = { disclosure = true },
-                trailing = { Text("Turn on", style = MaterialTheme.typography.titleMedium, color = BodyAccent) }
-            )
+    if (!tracking) {
+        GroupedSection(modifier) {
+            Row(
+                Modifier.fillMaxWidth()
+                    .clickable { disclosure = true }
+                    .heightIn(min = 52.dp)
+                    .padding(horizontal = Spacing.lg, vertical = Spacing.md)
+                    .semantics { contentDescription = "Warning: tracking is off. Reels will not be counted." },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    Modifier.size(22.dp).clip(CircleShape).background(BodyDanger),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("!", style = MaterialTheme.typography.titleMedium, color = BodyInk)
+                }
+                Spacer(Modifier.width(Spacing.md))
+                Column(Modifier.weight(1f)) {
+                    Text("Tracking is off", style = MaterialTheme.typography.bodyLarge, color = BodyInk)
+                    Text("Reels will not be counted.", style = MaterialTheme.typography.bodySmall, color = BodyMuted)
+                }
+                Text("Turn on", style = MaterialTheme.typography.titleMedium, color = BodyInk)
+            }
         }
     }
     if (disclosure) TrackingDisclosure(onDismiss = { disclosure = false })

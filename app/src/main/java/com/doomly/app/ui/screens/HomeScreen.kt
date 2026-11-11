@@ -37,16 +37,19 @@ import kotlinx.coroutines.delay
 @Composable
 fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
     val context = LocalContext.current
+    val reducedMotion = LocalReduceMotion.current
     val snapshot by viewModel.getSnapshot().observeAsState()
     var editGoal by rememberSaveable { mutableStateOf(false) }
     var goalFeedback by rememberSaveable { mutableStateOf<String?>(null) }
     var goalText by rememberSaveable { mutableStateOf("") }
     var tab by rememberSaveable { mutableIntStateOf(0) }
+    var shareRecap by remember { mutableStateOf<DailyRecap?>(null) }
+    shareRecap?.let { DailyRecapDialog(it) { shareRecap = null } }
     StatsRefreshEffect { viewModel.refresh() }
     val reels = snapshot?.todayReels ?: 0
     val streak = snapshot?.streak ?: 0
     val target = snapshot?.dailyTarget?.coerceAtLeast(1) ?: DoomStatsStore.DEFAULT_DAILY_TARGET
-    val animatedReels by animateIntAsState(reels, tween(450), label = "reels")
+    val animatedReels by animateIntAsState(reels, tween(motionDuration(450)), label = "reels")
     val reached = reels >= target
     val level = ScrollLevel.forCount(reels)
     val next = MotivationEngine.nextMilestone(reels, target)
@@ -55,14 +58,17 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
     var milestone by rememberSaveable(dayKey) { mutableIntStateOf(0) }
     var celebrationEvent by rememberSaveable(dayKey) { mutableIntStateOf(0) }
     val countPop = remember { Animatable(1f) }
-    LaunchedEffect(snapshot?.todayReels, dayKey) {
+    LaunchedEffect(snapshot?.todayReels, dayKey, reducedMotion) {
+        countPop.snapTo(1f)
         if (snapshot == null) return@LaunchedEffect
         val previous = lastCount; lastCount = reels
         if (previous != null && reels > previous) {
             if (MotivationEngine.reachedMilestone(reels, target) > MotivationEngine.reachedMilestone(previous, target)) {
                 milestone = MotivationEngine.reachedMilestone(reels, target); celebrationEvent++
             }
-            countPop.snapTo(1f); countPop.animateTo(1f, keyframes { durationMillis = 300; 1.04f at 100; 1f at 300 })
+            if (!reducedMotion) {
+                countPop.snapTo(1f); countPop.animateTo(1f, keyframes { durationMillis = 300; 1.04f at 100; 1f at 300 })
+            }
         }
     }
     if (editGoal) GoalDialog(goalText, { goalText = it }, {
@@ -77,6 +83,7 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
     val todayLabel = LocalDate.now().format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()))
 
     Column(Modifier.fillMaxSize().background(BodyBg).verticalScroll(rememberScrollState())) {
+        TrackingStatus(resumeCount, Modifier.statusBarsPadding().padding(start = Spacing.screen, end = Spacing.screen, top = Spacing.lg))
         TopSheet {
             SheetContent {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -125,7 +132,10 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
             Spacer(Modifier.height(Spacing.lg))
             TextTabs(listOf("Week", "Month", "Levels"), tab, { tab = it })
             Spacer(Modifier.height(Spacing.lg))
-            AnimatedContent(tab, transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "tab") { selected ->
+            AnimatedContent(tab, transitionSpec = {
+                if (reducedMotion) (EnterTransition.None togetherWith ExitTransition.None).using(null)
+                else fadeIn(tween(180)) togetherWith fadeOut(tween(120))
+            }, label = "tab") { selected ->
                 when (selected) {
                     0 -> Column {
                         SectionHeading("Reels per day")
@@ -139,15 +149,10 @@ fun HomeScreen(viewModel: TodayViewModel = viewModel(), resumeCount: Int = 0) {
                 }
             }
             Spacer(Modifier.height(Spacing.xxl))
-            TrackingStatus(resumeCount)
-            Spacer(Modifier.height(Spacing.xxl))
             PrimaryButton("Open Instagram", onClick = { (context.findActivity() as? MainActivity)?.openInstagram() })
             QuietButton("Share today's count", onClick = {
-                val share = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                    type = "text/plain"; putExtra(android.content.Intent.EXTRA_TEXT, "$reels reels today")
-                }
-                try { context.startActivity(android.content.Intent.createChooser(share, "Share")) }
-                catch (_: android.content.ActivityNotFoundException) { goalFeedback = "No app to share with" }
+                val current = DoomStatsStore.snapshot(context)
+                shareRecap = DailyRecap(LocalDate.now(), current.todayReels, current.dailyTarget, current.streak, DoomStatsStore.dailyHistory(context))
             })
             Spacer(Modifier.height(Spacing.lg))
         }
@@ -177,6 +182,7 @@ private fun LevelList(reels: Int) {
 
 @Composable
 private fun MilestoneNotice(milestone: Int, event: Int) {
+    val reduced = LocalReduceMotion.current
     var visible by remember { mutableStateOf(false) }
     var handledEvent by rememberSaveable { mutableIntStateOf(event) }
     LaunchedEffect(event) {
@@ -184,7 +190,8 @@ private fun MilestoneNotice(milestone: Int, event: Int) {
         handledEvent = event; if (event == 0) { visible = false; return@LaunchedEffect }
         visible = true; delay(2_400); visible = false
     }
-    AnimatedVisibility(visible, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+    AnimatedVisibility(visible, enter = if (reduced) EnterTransition.None else fadeIn() + expandVertically(),
+        exit = if (reduced) ExitTransition.None else fadeOut() + shrinkVertically()) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = Spacing.xs)) {
             Box(Modifier.size(8.dp).clip(CircleShape).background(Accent))
             Spacer(Modifier.width(Spacing.sm))
@@ -194,16 +201,23 @@ private fun MilestoneNotice(milestone: Int, event: Int) {
 }
 
 @Composable
-private fun GoalDialog(value: String, onValue: (String) -> Unit, onSave: () -> Unit, onDismiss: () -> Unit) {
+internal fun GoalDialog(value: String, onValue: (String) -> Unit, onSave: () -> Unit, onDismiss: () -> Unit) {
     val valid = value.toIntOrNull() in 1..20_000
     AlertDialog(onDismissRequest = onDismiss, shape = DoomlyShapes.extraLarge, containerColor = Sheet,
         title = { Text("Daily goal", style = MaterialTheme.typography.headlineSmall, color = Ink) },
         text = {
-            OutlinedTextField(value, { onValue(it.filter(Char::isDigit).take(5)) }, label = { Text("Reels per day") },
-                isError = value.isNotEmpty() && !valid,
-                supportingText = { if (value.isNotEmpty() && !valid) Text("1–20,000") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true,
-                shape = DoomlyShapes.medium, colors = sheetFieldColors())
+            Column {
+                OutlinedTextField(value, { onValue(it.filter(Char::isDigit).take(5)) }, label = { Text("Reels per day") },
+                    isError = value.isNotEmpty() && !valid,
+                    supportingText = { if (value.isNotEmpty() && !valid) Text("1–20,000") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true,
+                    shape = DoomlyShapes.medium, colors = sheetFieldColors())
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    listOf(100, 200, 500).forEach { preset ->
+                        TextButton(onClick = { onValue(preset.toString()) }) { Text(preset.toString(), color = Ink) }
+                    }
+                }
+            }
         },
         confirmButton = { TextButton(onClick = onSave, enabled = valid) { Text("Save", color = if (valid) Ink else Smoke) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel", color = Smoke) } })

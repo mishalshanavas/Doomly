@@ -66,47 +66,9 @@ jobs:
           INPUT_VERSION_CODE: ${{ inputs.version_code }}
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            version_name="${GITHUB_REF_NAME#v}"
-            if [[ ! "$version_name" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)([-+][0-9A-Za-z.-]+)?$ ]]; then
-              echo "Release tags must use semantic versioning, for example v1.2.3" >&2
-              exit 1
-            fi
-            major=$((10#${BASH_REMATCH[1]}))
-            minor=$((10#${BASH_REMATCH[2]}))
-            patch=$((10#${BASH_REMATCH[3]}))
-            if (( minor > 999 || patch > 999 )); then
-              echo "Tag minor and patch numbers must each be 999 or lower" >&2
-              exit 1
-            fi
-            version_code=$((major * 1000000 + minor * 1000 + patch))
-            release_tag="$GITHUB_REF_NAME"
-          elif [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-            version_name="$INPUT_VERSION_NAME"
-            version_code="$INPUT_VERSION_CODE"
-            release_tag="v$version_name"
-          else
-            source_code=$(( $(git show -s --format=%ct HEAD) - 1577836800 ))
-            version_name="1.0.$source_code"
-            version_code=$((source_code + 2))
-            release_tag="v$version_name"
-            echo "BETA_RELEASE_TAG=v$version_name-beta" >> "$GITHUB_ENV"
-          fi
-
-          if [[ ! "$version_name" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.-]+)?$ ]]; then
-            echo "Version name must use semantic versioning, for example 1.2.3" >&2
-            exit 1
-          fi
-          if [[ ! "$version_code" =~ ^[1-9][0-9]*$ ]] || (( version_code > 2100000000 )); then
-            echo "Version code must be an integer from 1 through 2100000000" >&2
-            exit 1
-          fi
-
-          echo "DOOMLY_VERSION_NAME=$version_name" >> "$GITHUB_ENV"
-          echo "DOOMLY_VERSION_CODE=$version_code" >> "$GITHUB_ENV"
-          echo "RELEASE_BASENAME=Doomly-$version_name" >> "$GITHUB_ENV"
-          echo "RELEASE_TAG=$release_tag" >> "$GITHUB_ENV"
-          echo "RELEASE_COMMIT=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          python3 -m unittest discover -s scripts -p 'test_*.py'
+          gh api "repos/$GITHUB_REPOSITORY/releases/latest" > "$RUNNER_TEMP/latest-release.json"
+          python3 scripts/release_version.py stable --latest-release "$RUNNER_TEMP/latest-release.json" >> "$GITHUB_ENV"
 
       - name: Restore upload keystore
         shell: bash
@@ -131,7 +93,7 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Test and build release
-        run: ./gradlew --no-daemon testGithubDebugUnitTest lintGithubRelease lintPlayRelease assembleGithubRelease bundlePlayRelease
+        run: ./gradlew --no-daemon testGithubDebugUnitTest testPlayDebugUnitTest lintGithubRelease lintPlayRelease assembleGithubRelease bundlePlayRelease
 
       - name: Verify and stage artifacts
         shell: bash

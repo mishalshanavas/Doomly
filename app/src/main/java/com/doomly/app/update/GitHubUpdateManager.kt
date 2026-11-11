@@ -20,6 +20,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.security.MessageDigest
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 data class GitHubRelease(
@@ -64,13 +65,13 @@ class GitHubUpdateManager(context: Context) {
         activeCall = client.newCall(request).also { call ->
             call.enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
-                    if (!call.isCanceled()) post(onState, UpdateState.Failed("Could not check for updates."))
+                    post(call, onState, UpdateState.Failed("Could not check for updates."))
                 }
 
                 override fun onResponse(call: Call, response: Response) {
                     response.use {
                         if (!response.isSuccessful) {
-                            post(onState, UpdateState.Failed("Update check failed (${response.code})."))
+                            post(call, onState, UpdateState.Failed("Update check failed (${response.code})."))
                             return
                         }
                         try {
@@ -84,17 +85,20 @@ class GitHubUpdateManager(context: Context) {
                             }.filter { (json, release) ->
                                 UpdateCandidatePolicy.isNewer(json.optString("body"), release.versionName,
                                     BuildConfig.VERSION_CODE.toLong(), BuildConfig.VERSION_NAME)
-                            }.maxByOrNull { (json, _) -> UpdateCandidatePolicy.buildCode(json.optString("body")) }
+                            }.reduceOrNull { best, next ->
+                                if (UpdateCandidatePolicy.isPreferred(next.second.notes, next.second.versionName,
+                                        best.second.notes, best.second.versionName)) next else best
+                            }
                             if (candidate == null) {
-                                post(onState, UpdateState.UpToDate)
+                                post(call, onState, UpdateState.UpToDate)
                                 return
                             }
                             val (_, release) = candidate
                             val cached = matchingCachedApk(release)
                             val state = if (cached != null) UpdateState.ReadyToInstall(release, cached) else UpdateState.Available(release)
-                            post(onState, state)
+                            post(call, onState, state)
                         } catch (_: Exception) {
-                            post(onState, UpdateState.Failed("The release information was invalid."))
+                            post(call, onState, UpdateState.Failed("The release information was invalid."))
                         }
                     }
                 }
@@ -113,33 +117,31 @@ class GitHubUpdateManager(context: Context) {
         activeCall = client.newCall(request).also { call ->
             call.enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
-                    if (!call.isCanceled()) post(onState, UpdateState.Failed("The update download failed."))
+                    post(call, onState, UpdateState.Failed("The update download failed."))
                 }
 
                 override fun onResponse(call: Call, response: Response) {
                     response.use {
                         if (!response.isSuccessful) {
-                            post(onState, UpdateState.Failed("Download failed (${response.code})."))
+                            post(call, onState, UpdateState.Failed("Download failed (${response.code})."))
                             return
                         }
                         val body = response.body ?: run {
-                            post(onState, UpdateState.Failed("The update download was empty."))
+                            post(call, onState, UpdateState.Failed("The update download was empty."))
                             return
                         }
                         val declaredLength = body.contentLength()
                         if (declaredLength <= 0 || declaredLength > MAX_APK_BYTES || declaredLength != release.apkSize) {
-                            post(onState, UpdateState.Failed("The update has an unexpected size."))
+                            post(call, onState, UpdateState.Failed("The update has an unexpected size."))
                             return
                         }
                         val directory = File(appContext.cacheDir, "updates")
                         if (!directory.exists() && !directory.mkdirs()) {
-                            post(onState, UpdateState.Failed("Could not prepare the update folder."))
+                            post(call, onState, UpdateState.Failed("Could not prepare the update folder."))
                             return
                         }
-                        val partial = File(directory, "doomly-update.part")
+                        val partial = File(directory, "doomly-update-${UUID.randomUUID()}.part")
                         val apk = File(directory, "doomly-update.apk")
-                        partial.delete()
-                        apk.delete()
                         try {
                             body.byteStream().use { input ->
                                 FileOutputStream(partial).use { output ->
@@ -148,31 +150,35 @@ class GitHubUpdateManager(context: Context) {
                                     var lastPercent = -1
                                     while (true) {
                                         val count = input.read(buffer)
-                                        if (count < 0) break
+                                        if (count < 0) {
+                                            break
+                                        }
                                         downloaded += count
                                         if (downloaded > MAX_APK_BYTES) throw IOException("APK too large")
                                         output.write(buffer, 0, count)
                                         val percent = (downloaded * 100L / declaredLength).toInt().coerceIn(0, 100)
                                         if (percent >= lastPercent + 5) {
                                             lastPercent = percent
-                                            post(onState, UpdateState.Downloading(release, percent))
+                                            post(call, onState, UpdateState.Downloading(release, percent))
                                         }
                                     }
                                     if (downloaded != declaredLength) throw IOException("Incomplete APK")
                                     output.fd.sync()
                                 }
                             }
-                            if (!partial.renameTo(apk) || matchingCachedApk(release) == null) {
+                            if (call.isCanceled()) {
                                 partial.delete()
-                                apk.delete()
-                                post(onState, UpdateState.Failed("Update verification failed. Nothing was installed."))
                                 return
                             }
-                            post(onState, UpdateState.ReadyToInstall(release, apk))
+                            if (!verifyDownloadedApk(partial, release) || !partial.renameTo(apk)) {
+                                partial.delete()
+                                post(call, onState, UpdateState.Failed("Update verification failed. Nothing was installed."))
+                                return
+                            }
+                            post(call, onState, UpdateState.ReadyToInstall(release, apk))
                         } catch (_: Exception) {
                             partial.delete()
-                            apk.delete()
-                            post(onState, UpdateState.Failed("The update could not be saved safely."))
+                            post(call, onState, UpdateState.Failed("The update could not be saved safely."))
                         }
                     }
                 }
@@ -182,14 +188,11 @@ class GitHubUpdateManager(context: Context) {
 
     private fun matchingCachedApk(release: GitHubRelease): File? {
         val apk = File(appContext.cacheDir, "updates/doomly-update.apk")
-        if (!apk.isFile || apk.length() != release.apkSize || !verifyDownloadedApk(apk)) return null
-        @Suppress("DEPRECATION")
-        val info = appContext.packageManager.getPackageArchiveInfo(apk.absolutePath, 0)
-        return apk.takeIf { info?.versionName == release.versionName }
+        return apk.takeIf { verifyDownloadedApk(it, release) }
     }
 
     fun install(activity: Activity, ready: UpdateState.ReadyToInstall): Boolean {
-        if (!BuildConfig.ENABLE_GITHUB_UPDATES || !verifyDownloadedApk(ready.apk)) return false
+        if (!BuildConfig.ENABLE_GITHUB_UPDATES || !verifyDownloadedApk(ready.apk, ready.release)) return false
         return try {
             if (!activity.packageManager.canRequestPackageInstalls()) {
                 activity.startActivity(
@@ -244,8 +247,9 @@ class GitHubUpdateManager(context: Context) {
     }
 
     @Suppress("DEPRECATION")
-    private fun verifyDownloadedApk(apk: File): Boolean {
+    private fun verifyDownloadedApk(apk: File, release: GitHubRelease): Boolean {
         if (!apk.isFile || apk.length() !in 1..MAX_APK_BYTES) return false
+        if (apk.length() != release.apkSize) return false
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             PackageManager.GET_SIGNING_CERTIFICATES
         } else {
@@ -253,6 +257,9 @@ class GitHubUpdateManager(context: Context) {
         }
         val archive = appContext.packageManager.getPackageArchiveInfo(apk.absolutePath, flags) ?: return false
         if (archive.packageName != appContext.packageName) return false
+        if (archive.versionName != release.versionName) return false
+        val expectedCode = UpdateCandidatePolicy.buildCode(release.notes)
+        if (expectedCode > 0 && archive.longVersionCodeCompat() != expectedCode) return false
         val installed = appContext.packageManager.getPackageInfo(appContext.packageName, flags)
         if (archive.longVersionCodeCompat() <= installed.longVersionCodeCompat()) return false
         val installedSigners = certificateDigests(installed)
@@ -275,8 +282,8 @@ class GitHubUpdateManager(context: Context) {
     private fun android.content.pm.PackageInfo.longVersionCodeCompat(): Long =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) longVersionCode else versionCode.toLong()
 
-    private fun post(callback: (UpdateState) -> Unit, state: UpdateState) {
-        main.post { callback(state) }
+    private fun post(call: Call, callback: (UpdateState) -> Unit, state: UpdateState) {
+        main.post { if (!call.isCanceled()) callback(state) }
     }
 
     private companion object {

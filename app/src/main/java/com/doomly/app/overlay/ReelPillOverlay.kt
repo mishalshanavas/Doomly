@@ -53,6 +53,7 @@ class ReelPillOverlay(private val context: Context, private val isReelsForegroun
     fun preview() { safely { showMilestone(30, true) } }
     private val changed = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "enabled") handler.post { safely { if (!enabled(context)) hide() } }
+        if (key == "reduce_motion") handler.post { hide() }
     }
     init { prefs.registerOnSharedPreferenceChangeListener(changed) }
 

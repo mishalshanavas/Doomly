@@ -19,4 +19,9 @@ public final class UpdateCandidatePolicy {
         long code = buildCode(notes);
         return code > 0 ? code > installedCode : UpdateVersionPolicy.isNewer(version, installedVersion);
     }
+    public static boolean isPreferred(String notes, String version, String otherNotes, String otherVersion) {
+        long code = buildCode(notes), otherCode = buildCode(otherNotes);
+        if (code > 0 && otherCode > 0 && code != otherCode) return code > otherCode;
+        return UpdateVersionPolicy.isNewer(version, otherVersion);
+    }
 }

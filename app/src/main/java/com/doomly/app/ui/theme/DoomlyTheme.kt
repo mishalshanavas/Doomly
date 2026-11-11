@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
@@ -80,6 +81,6 @@ fun DoomlyTheme(darkTheme: Boolean = false, content: @Composable () -> Unit) {
         colorScheme = if (darkTheme) DarkScheme else LightScheme,
         typography = DoomlyTypography,
         shapes = DoomlyShapes,
-        content = content
+        content = { CompositionLocalProvider(LocalReduceMotion provides rememberReduceMotion(), content = content) }
     )
 }
